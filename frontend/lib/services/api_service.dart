@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
-import '../utils/api_constants.dart';
+import '../config/api_config.dart';
 
 class ApiService {
   final AuthService _authService = AuthService();
@@ -11,7 +11,7 @@ class ApiService {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return path;
     }
-    return '${ApiConstants.baseUrl}$path';
+    return '${ApiConfig.baseUrl}$path';
   }
   
   // Generic GET request
