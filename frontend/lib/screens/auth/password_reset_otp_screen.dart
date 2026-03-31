@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/support_info_widget.dart';
 import 'dart:async';
 import '../../services/auth_service.dart';
 import 'new_password_screen.dart';
@@ -93,7 +94,7 @@ class _PasswordResetOTPScreenState extends State<PasswordResetOTPScreen> {
     setState(() => _isLoading = true);
 
     final result = await _authService.verifyPasswordResetOTP(
-      widget.resetData['reset_id'],
+      int.parse(widget.resetData['reset_id'].toString()),
       otp,
       _usePhone ? 'phone' : 'email',
     );
@@ -287,6 +288,8 @@ class _PasswordResetOTPScreenState extends State<PasswordResetOTPScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
+              const SupportInfoWidget(showInFooter: true),
             ],
           ),
         ),
