@@ -15,8 +15,7 @@ APPINSIGHTS_KEY=$(az monitor app-insights component show \
 # Build for web with environment variables
 flutter build web --release \
   --dart-define=API_BASE_URL=https://webapp-seevak-backend.azurewebsites.net \
-  --dart-define=APPINSIGHTS_KEY=$APPINSIGHTS_KEY \
-  --web-renderer html
+  --dart-define=APPINSIGHTS_KEY=$APPINSIGHTS_KEY
 
 # Copy build to Azure Static Web Apps structure
 mkdir -p azure-static-web-app

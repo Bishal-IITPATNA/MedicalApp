@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/api_constants.dart';
+import '../config/api_config.dart';
 import '../models/user_model.dart';
 
 class AuthService {
@@ -16,7 +16,7 @@ class AuthService {
       print('🔍 AuthService: checkUserRoles called for: $loginId'); // Debug log
       
       final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/api/auth/check-roles'),
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/check-roles'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'login_id': loginId,
@@ -46,7 +46,7 @@ class AuthService {
       print('🔍 AuthService: loginWithRole called with role: $role'); // Debug log
       
       final response = await http.post(
-        Uri.parse(ApiConstants.login),
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'login_id': loginId,
@@ -88,11 +88,11 @@ class AuthService {
   // Register
   Future<Map<String, dynamic>> register(Map<String, dynamic> userData) async {
     try {
-      print('🔍 Sending registration request to: ${ApiConstants.register}'); // Debug logging
+      print('🔍 Sending registration request to: ${ApiConfig.baseUrl}/api/auth/register'); // Debug logging
       print('🔍 Request data: $userData'); // Debug logging
       
       final response = await http.post(
-        Uri.parse(ApiConstants.register),
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(userData),
       );
@@ -164,7 +164,7 @@ class AuthService {
   Future<Map<String, dynamic>> verifyOTP(int verificationId, String otp, String type) async {
     try {
       final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/api/auth/verify-otp'),
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/verify-otp'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'verification_id': verificationId,
@@ -196,7 +196,7 @@ class AuthService {
   Future<Map<String, dynamic>> resendOTP(int verificationId, String type) async {
     try {
       final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/api/auth/resend-otp'),
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/resend-otp'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'verification_id': verificationId,
@@ -259,7 +259,7 @@ class AuthService {
       if (refreshToken == null) return false;
       
       final response = await http.post(
-        Uri.parse(ApiConstants.refresh),
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/refresh'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $refreshToken',
@@ -287,7 +287,7 @@ class AuthService {
       }
       
       final response = await http.get(
-        Uri.parse(ApiConstants.me),
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/me'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -311,7 +311,7 @@ class AuthService {
   Future<Map<String, dynamic>> forgotPassword(String email) async {
     try {
       final response = await http.post(
-        Uri.parse(ApiConstants.forgotPassword),
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/forgot-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
@@ -341,7 +341,7 @@ class AuthService {
   Future<Map<String, dynamic>> verifyPasswordResetOTP(int resetId, String otp, String type) async {
     try {
       final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/api/auth/verify-password-reset-otp'),
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/verify-password-reset-otp'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'reset_id': resetId,
@@ -369,7 +369,7 @@ class AuthService {
   Future<Map<String, dynamic>> resendPasswordResetOTP(int resetId, String type) async {
     try {
       final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/api/auth/resend-password-reset-otp'),
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/resend-password-reset-otp'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'reset_id': resetId,
@@ -396,7 +396,7 @@ class AuthService {
   Future<Map<String, dynamic>> resetPassword(int resetId, String newPassword) async {
     try {
       final response = await http.post(
-        Uri.parse(ApiConstants.resetPassword),
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/reset-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'reset_id': resetId,
@@ -425,7 +425,7 @@ class AuthService {
       }
       
       final response = await http.post(
-        Uri.parse(ApiConstants.changePassword),
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/change-password'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
