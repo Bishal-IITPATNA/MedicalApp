@@ -45,7 +45,7 @@ jobs:
       - name: Build Flutter Web
         run: |
              cd frontend
-             flutter build web --release --dart-define=API_BASE_URL=https://webapp-seevak-backend.azurewebsites.net/api
+             flutter build web --release --dart-define=API_BASE_URL=https://webapp-seevak-backend.azurewebsites.net
 
 
       - name: Deploy to Azure Static Web Apps
