@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/support_info_widget.dart';
 import '../../services/auth_service.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
@@ -53,43 +54,93 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
     setState(() => _isLoading = true);
 
-    final result = await _authService.resetPassword(
-      _emailController.text.trim(),
-      _tokenController.text.trim(),
-      _passwordController.text,
-    );
-
-    setState(() => _isLoading = false);
-
-    if (mounted) {
-      if (result['success']) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: const Text('Success'),
-            content: const Text(
-              'Your password has been reset successfully. You can now login with your new password.',
+    try {
+      // Step 1: Request password reset to get resetId
+      final forgotResult = await _authService.forgotPassword(_emailController.text.trim());
+      
+      if (!forgotResult['success']) {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(forgotResult['error'] ?? 'Failed to initiate password reset'),
+              backgroundColor: Colors.red,
             ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/login',
-                    (route) => false,
-                  );
-                },
-                child: const Text('Go to Login'),
+          );
+        }
+        return;
+      }
+
+      final resetId = int.parse(forgotResult['reset_id'].toString());
+
+      // Step 2: Verify OTP token
+      final verifyResult = await _authService.verifyPasswordResetOTP(
+        resetId,
+        _tokenController.text.trim(),
+        'email',
+      );
+
+      if (!verifyResult['success']) {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(verifyResult['error'] ?? 'Invalid verification token'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Step 3: Reset password
+      final result = await _authService.resetPassword(
+        resetId,
+        _passwordController.text,
+      );
+
+      setState(() => _isLoading = false);
+
+      if (mounted) {
+        if (result['success']) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              title: const Text('Success'),
+              content: const Text(
+                'Your password has been reset successfully. You can now login with your new password.',
               ),
-            ],
-          ),
-        );
-      } else {
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Close dialog
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/login',
+                      (route) => false,
+                    );
+                  },
+                  child: const Text('Go to Login'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['error'] ?? 'Failed to reset password'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['error'] ?? 'Failed to reset password'),
+            content: Text('An error occurred: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -248,6 +299,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     },
                     child: const Text('Back to Login'),
                   ),
+                  const SizedBox(height: 24),
+                  const SupportInfoWidget(showInFooter: true),
                 ],
               ),
             ),
