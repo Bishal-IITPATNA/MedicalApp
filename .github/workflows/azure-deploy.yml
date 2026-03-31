@@ -7,91 +7,52 @@ on:
 jobs:
   deploy-backend:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
-    - name: Install dependencies
-      run: |
-        cd backend
-        pip install -r requirements.txt
-    
-    - name: Create startup script
-      run: |
-        cd backend
-        if [ ! -f startup.py ]; then
-          echo "Creating startup.py..."
-          echo "import os" > startup.py
-          echo "from run import app" >> startup.py
-          echo "" >> startup.py
-          echo "if __name__ == '__main__':" >> startup.py
-          echo "    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8000)))" >> startup.py
-        fi
-    
-    - name: Create deployment package
-      run: |
-        cd backend
-        zip -r ../backend-deploy.zip . -x "*.git*" "**/__pycache__/**" "*.pyc" "**/.pytest_cache/**"
-    
-    - name: Clear any existing deployment locks (if needed)
-      run: |
-        echo "Checking deployment status..."
-        az webapp restart \
-          --name webapp-seevak-backend \
-          --resource-group rg-seevak-care-prod || true
-    
-    - name: Deploy to Azure Web App
-      run: |
-        az webapp deployment source config-zip \
-          --resource-group rg-seevak-care-prod \
-          --name webapp-seevak-backend \
-          --src backend-deploy.zip
+      - uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create ZIP package
+        run: |
+          cd backend
+          zip -r ../backend.zip . -x "*.git*" "**/__pycache__/**" "*.pyc"
+
+      - name: Deploy Backend to Azure App Service
+        run: |
+          az webapp deployment source config-zip \
+            --resource-group rg-seevak-care-prod \
+            --name webapp-seevak-backend \
+            --src backend.zip
 
   deploy-frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.41.6'
-        channel: 'stable'
-    
-    - name: Clean and Update Dependencies
-      run: |
-        cd frontend
-        flutter clean
-        flutter pub get --no-precompile
-        flutter pub outdated || true
-    
-    - name: Build Flutter Web (with compatibility fixes)
-      run: |
-        cd frontend
-        flutter build web --release \
-          --dart-define=API_BASE_URL=https://webapp-seevak-backend.azurewebsites.net/api \
-          --dart-define=FLUTTER_WEB_USE_SKIA=false \
-          --dart-define=FLUTTER_WEB_AUTO_DETECT=false \
-          --web-renderer canvaskit \
-          --no-tree-shake-icons
-    
-    - name: Deploy to Azure Static Web Apps
-      uses: Azure/static-web-apps-deploy@v1
-      with:
-        azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        action: "upload"
-        app_location: "/frontend"
-        api_location: ""
-        output_location: "/build/web"
+      - uses: actions/checkout@v3
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.6'
+          channel: stable
+
+      - name: Build Flutter Web
+        run: |
+          cd frontend
+          flutter pub get
+          flutter build web --release --web-renderer canvaskit
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: "frontend"
+          output_location: "build/web"
