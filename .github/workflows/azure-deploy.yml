@@ -8,52 +8,69 @@ jobs:
   deploy-backend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      # Optional, but fine to keep for linting / early failures
-      - name: Install backend dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt
-
-      - name: Deploy Backend to Azure Web App
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: webapp-seevak-backend
-          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
-          package: backend
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+    
+    - name: Create deployment package
+      run: |
+        cd backend
+        zip -r ../backend-deploy.zip . -x "*.git*" "**/__pycache__/**" "*.pyc" "**/.pytest_cache/**"
+    
+    - name: Deploy to Azure Web App
+      run: |
+        az webapp deployment source config-zip \
+          --resource-group rg-seevak-care-prod \
+          --name webapp-seevak-backend \
+          --src backend-deploy.zip
 
   deploy-frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.41.6'   # ✅ FIXED
-          channel: stable
-
-      - name: Disable Flutter analytics
-        run: flutter config --no-analytics
-
-      - name: Build Flutter Web
-        run: |
-          cd frontend
-          flutter pub get
-          flutter build web --release
-
-      - name: Deploy to Azure Static Web Apps
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          action: "upload"
-          app_location: "frontend"        # ✅ FIXED (no slash)
-          api_location: ""                # correct
-          output_location: "build/web"    # ✅ FIXED (no slash)
+    - uses: actions/checkout@v3
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.19.6'
+        channel: 'stable'
+    
+    - name: Clean and Update Dependencies
+      run: |
+        cd frontend
+        flutter clean
+        flutter pub get --no-precompile
+        flutter pub outdated || true
+    
+    - name: Build Flutter Web (with compatibility fixes)
+      run: |
+        cd frontend
+        flutter build web --release \
+          --dart-define=API_BASE_URL=https://webapp-seevak-backend.azurewebsites.net/api \
+          --dart-define=FLUTTER_WEB_USE_SKIA=false \
+          --dart-define=FLUTTER_WEB_AUTO_DETECT=false \
+          --web-renderer canvaskit \
+          --no-tree-shake-icons
+    
+    - name: Deploy to Azure Static Web Apps
+      uses: Azure/static-web-apps-deploy@v1
+      with:
+        azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        action: "upload"
+        app_location: "/frontend"
+        api_location: ""
+        output_location: "/build/web"
