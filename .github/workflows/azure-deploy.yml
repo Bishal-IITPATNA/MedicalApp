@@ -7,6 +7,7 @@ on:
 jobs:
   deploy-backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
     - uses: actions/checkout@v3
     
@@ -25,20 +26,41 @@ jobs:
         cd backend
         pip install -r requirements.txt
     
+    - name: Create startup script
+      run: |
+        cd backend
+        if [ ! -f startup.py ]; then
+          echo "Creating startup.py..."
+          echo "import os" > startup.py
+          echo "from run import app" >> startup.py
+          echo "" >> startup.py
+          echo "if __name__ == '__main__':" >> startup.py
+          echo "    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8000)))" >> startup.py
+        fi
+    
     - name: Create deployment package
       run: |
         cd backend
         zip -r ../backend-deploy.zip . -x "*.git*" "**/__pycache__/**" "*.pyc" "**/.pytest_cache/**"
+    
+    - name: Clear any existing deployment locks (if needed)
+      run: |
+        echo "Checking deployment status..."
+        az webapp restart \
+          --name webapp-seevak-backend \
+          --resource-group rg-seevak-care-prod || true
     
     - name: Deploy to Azure Web App
       run: |
         az webapp deployment source config-zip \
           --resource-group rg-seevak-care-prod \
           --name webapp-seevak-backend \
-          --src backend-deploy.zip
+          --src backend-deploy.zip \
+          --timeout 600
 
   deploy-frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
     - uses: actions/checkout@v3
     
