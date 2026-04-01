@@ -23,7 +23,8 @@ def create_app(config_class=Config):
     # Note: Avoid fnmatch wildcards (e.g. "http://localhost:*") in Flask-CORS 4.x
     # as they can break origin matching for all origins including production.
     cors_origins = [
-        "https://seevak-care.azurestaticapps.net",  # Production frontend
+        "https://seevak-care.azurestaticapps.net",           # Production custom domain
+        "https://brave-smoke-045200400.6.azurestaticapps.net",  # Production default Azure SWA URL
         "http://localhost:3000",  # Flutter web dev server
         "http://127.0.0.1:3000",  # Alternative localhost
         "http://localhost:5000",  # Local Flask dev server
