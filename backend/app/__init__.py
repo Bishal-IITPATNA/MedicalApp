@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -54,11 +55,12 @@ def create_app(config_class=Config):
     @app.route('/')
     @app.route('/health')
     def health_check():
+        is_production = 'WEBSITE_SITE_NAME' in os.environ or app.config.get('ENV') == 'production'
         return {
             'status': 'healthy',
             'message': 'Seevak Care Medical App Backend is running',
             'version': '1.0.0',
-            'environment': 'production' if app.config.get('ENV') == 'production' else 'development'
+            'environment': 'production' if is_production else 'development'
         }
     
     return app
