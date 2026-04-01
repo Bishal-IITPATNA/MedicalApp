@@ -9,9 +9,9 @@ backlog = 2048
 
 # Worker processes
 workers = int(os.environ.get('GUNICORN_WORKERS', 2))
-worker_class = "gevent"
+worker_class = "gevent"  # requires gevent in requirements.txt
 worker_connections = 1000
-timeout = 30
+timeout = 600  # Azure App Service idle timeout is 230s, keep higher
 keepalive = 2
 
 # Restart workers after this many requests, to help prevent memory leaks

@@ -1,10 +1,6 @@
 {
   "routes": [
     {
-      "route": "/api/*",
-      "rewrite": "/api/*"
-    },
-    {
       "route": "/*",
       "serve": "/index.html",
       "statusCode": 200
@@ -12,12 +8,13 @@
   ],
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/api/*"]
+    "exclude": ["/assets/*", "/icons/*", "/canvaskit/*", "*.js", "*.css", "*.json", "*.wasm"]
   },
   "mimeTypes": {
     ".json": "application/json",
     ".js": "application/javascript",
-    ".css": "text/css"
+    ".css": "text/css",
+    ".wasm": "application/wasm"
   },
   "globalHeaders": {
     "Cache-Control": "no-cache"

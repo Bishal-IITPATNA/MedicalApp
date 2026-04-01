@@ -9,20 +9,12 @@ import sys
 from app import create_app
 
 # Create Flask application instance
+# Routes (/, /health) are defined inside create_app() in app/__init__.py
 app = create_app()
 
 # Ensure we're using the correct port for Azure
 port = int(os.environ.get('PORT', 8000))
 host = os.environ.get('HOST', '0.0.0.0')
-
-
-@app.route('/')
-def root():
-    return {
-        'message': 'Seevak Care - Medical App API',
-        'status': 'running',
-        'version': '1.0.0'
-    }
 
 # Database initialization function for Azure
 @app.cli.command()

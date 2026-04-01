@@ -20,19 +20,25 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     
     # Configure CORS with explicit origins for production
+    # Note: Avoid fnmatch wildcards (e.g. "http://localhost:*") in Flask-CORS 4.x
+    # as they can break origin matching for all origins including production.
     cors_origins = [
         "https://seevak-care.azurestaticapps.net",  # Production frontend
         "http://localhost:3000",  # Flutter web dev server
         "http://127.0.0.1:3000",  # Alternative localhost
-        "http://localhost:*",     # Any localhost port for development
-        "http://127.0.0.1:*"      # Any 127.0.0.1 port for development
+        "http://localhost:5000",  # Local Flask dev server
+        "http://127.0.0.1:5000",  # Local Flask dev server (alt)
+        "http://localhost:8080",  # Common alt dev port
+        "http://127.0.0.1:8080",  # Common alt dev port (alt)
     ]
     
-    CORS(app, 
+    CORS(app,
          origins=cors_origins,
          supports_credentials=True,
          allow_headers=['Content-Type', 'Authorization'],
-         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+         expose_headers=['Content-Type', 'Authorization'],
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+         max_age=600)
     
     # Register blueprints
     from app.routes import auth, patient, doctor, nurse, medical_store, lab_store, admin, appointments, notifications, payments, prescriptions, patient_history, doctor_lab_tests
