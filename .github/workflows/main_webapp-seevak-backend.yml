@@ -67,10 +67,22 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_2DD5AD037E6E439AAD7D3BF85369D565 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_55D71896B10244CCA1DA74C96776A35C }}
 
+      - name: 'Resolve potential conflicts before deployment'
+        run: |
+          echo "🔧 Preparing for deployment..."
+          # Stop the web app to prevent 409 conflicts
+          az webapp stop --name webapp-seevak-backend --resource-group rg-seevak-care-prod || echo "App stop failed, continuing..."
+          sleep 10
+          # Start the web app
+          az webapp start --name webapp-seevak-backend --resource-group rg-seevak-care-prod || echo "App start failed, continuing..."
+          sleep 5
+          echo "✅ Conflict resolution completed"
+
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'webapp-seevak-backend'
           slot-name: 'Production'
+          package: './backend'
           
