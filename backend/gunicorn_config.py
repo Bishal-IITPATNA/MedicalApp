@@ -41,8 +41,8 @@ certfile = None
 preload_app = True
 reload = False
 
-# Application configuration
-wsgi_file = "startup:app"
+# Application configuration - Updated for proper WSGI loading
+wsgi_file = "wsgi:application"
 
 def when_ready(server):
     print("Medical App Backend server is ready. Accepting connections...")
