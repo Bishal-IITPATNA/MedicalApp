@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, request, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
@@ -40,6 +40,30 @@ def create_app(config_class=Config):
          expose_headers=['Content-Type', 'Authorization'],
          methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
          max_age=600)
+    
+    # Manual CORS headers for Azure App Service compatibility
+    @app.after_request
+    def after_request(response):
+        origin = request.headers.get('Origin')
+        if origin in cors_origins:
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    # Handle preflight requests
+    @app.before_request
+    def handle_preflight():
+        if request.method == "OPTIONS":
+            response = make_response()
+            origin = request.headers.get('Origin')
+            if origin in cors_origins:
+                response.headers.add("Access-Control-Allow-Origin", origin)
+                response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+                response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+                response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response
     
     # Register blueprints
     from app.routes import auth, patient, doctor, nurse, medical_store, lab_store, admin, appointments, notifications, payments, prescriptions, patient_history, doctor_lab_tests
