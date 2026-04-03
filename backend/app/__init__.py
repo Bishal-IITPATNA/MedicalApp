@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from flask import Flask, request, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -98,12 +99,41 @@ def create_app(config_class=Config):
     @app.route('/')
     @app.route('/health')
     def health_check():
+        """Health check endpoint with detailed environment info"""
+        import sys
         is_production = 'WEBSITE_SITE_NAME' in os.environ or app.config.get('ENV') == 'production'
+        
+        # Get environment information
+        env_info = {
+            'python_version': sys.version,
+            'website_site_name': os.environ.get('WEBSITE_SITE_NAME', 'Not set'),
+            'website_hostname': os.environ.get('WEBSITE_HOSTNAME', 'Not set'),
+            'pythonpath': sys.path[:3] if len(sys.path) > 3 else sys.path,  # First few paths only
+            'working_directory': os.getcwd(),
+            'environment': 'production' if is_production else 'development'
+        }
+        
         return {
             'status': 'healthy',
             'message': 'Seevak Care Medical App Backend is running',
             'version': '1.0.0',
-            'environment': 'production' if is_production else 'development'
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'environment_info': env_info if not is_production else None  # Only show in dev
         }
+    
+    # Add simple API test endpoint
+    @app.route('/api/test')
+    def api_test():
+        """Simple API test endpoint"""
+        return {'message': 'API is working', 'timestamp': datetime.utcnow().isoformat() + 'Z'}
+        
+    # Add error handlers
+    @app.errorhandler(500)
+    def internal_error(error):
+        return {'error': 'Internal server error', 'message': 'Something went wrong'}, 500
+        
+    @app.errorhandler(404)
+    def not_found(error):
+        return {'error': 'Not found', 'message': 'The requested resource was not found'}, 404
     
     return app
