@@ -11,11 +11,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     permissions:
-      contents: read
+      contents: read #This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +24,45 @@ jobs:
         with:
           python-version: '3.11'
 
+      # 🛠️ Local Build Section (Optional)
+      # The following section in your workflow is designed to catch build issues early on the client side, before deployment. This can be helpful for debugging and validation. However, if this step significantly increases deployment time and early detection is not critical for your workflow, you may remove this section to streamline the deployment process.
+      - name: Create and Start virtual environment and Install dependencies
+        run: |
+          cd backend
+          python -m venv antenv
+          source antenv/bin/activate
+          pip install -r requirements.txt
+                
+      # By default, when you enable GitHub CI/CD integration through the Azure portal, the platform automatically sets the SCM_DO_BUILD_DURING_DEPLOYMENT application setting to true. This triggers the use of Oryx, a build engine that handles application compilation and dependency installation (e.g., pip install) directly on the platform during deployment. Hence, we exclude the antenv virtual environment directory from the deployment artifact to reduce the payload size. 
+      - name: Upload artifact for deployment jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-app
+          path: |
+            backend/
+            !backend/antenv/
+            !backend/__pycache__/
+            !backend/.git
+
+      # 🚫 Opting Out of Oryx Build
+      # If you prefer to disable the Oryx build process during deployment, follow these steps:
+      # 1. Remove the SCM_DO_BUILD_DURING_DEPLOYMENT app setting from your Azure App Service Environment variables.
+      # 2. Refer to sample workflows for alternative deployment strategies: https://github.com/Azure/actions-workflow-samples/tree/master/AppService
+      
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: python-app
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -32,86 +70,26 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_2DD5AD037E6E439AAD7D3BF85369D565 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_55D71896B10244CCA1DA74C96776A35C }}
 
-      - name: Create deployment package
+      - name: 'Resolve potential conflicts before deployment'
         run: |
-          cd backend
-          echo "📦 Creating deployment package..."
-          # Clean up any cache files
-          find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-          find . -name "*.pyc" -delete 2>/dev/null || true
-          
-          # Create clean ZIP package
-          zip -r ../backend-deploy.zip . \
-            -x "*.git*" \
-            -x "**/__pycache__/**" \
-            -x "*.pyc" \
-            -x "*.log" \
-            -x "antenv/**" \
-            -x "venv/**"
-          
-          cd ..
-          echo "✅ Package created: $(ls -lh backend-deploy.zip)"
-
-      - name: Configure Azure App Service
-        run: |
-          echo "⚙️ Configuring Azure App Service..."
-          
-          # Stop app to prevent conflicts
-          az webapp stop --name webapp-seevak-backend --resource-group rg-seevak-care-prod || echo "Stop failed"
+          echo "🔧 Preparing for deployment..."
+          # Clear any cached configurations that might reference startup.py
+          az webapp config appsettings set --name webapp-seevak-backend --resource-group rg-seevak-care-prod --settings WEBSITE_RESET_DEPS=1 || echo "Settings update failed, continuing..."
+          # Set correct startup command
+          az webapp config set --name webapp-seevak-backend --resource-group rg-seevak-care-prod --startup-file "python main.py" || echo "Startup command failed, continuing..."
+          # Stop the web app to prevent 409 conflicts  
+          az webapp stop --name webapp-seevak-backend --resource-group rg-seevak-care-prod || echo "App stop failed, continuing..."
           sleep 10
-          
-          # Configure app settings
-          az webapp config appsettings set \
-            --name webapp-seevak-backend \
-            --resource-group rg-seevak-care-prod \
-            --settings \
-              WEBSITE_RUN_FROM_PACKAGE=0 \
-              SCM_DO_BUILD_DURING_DEPLOYMENT=true \
-              ENABLE_ORYX_BUILD=true || echo "Settings failed"
-          
-          # Set startup command
-          az webapp config set \
-            --name webapp-seevak-backend \
-            --resource-group rg-seevak-care-prod \
-            --startup-file "python main.py" || echo "Startup command failed"
+          # Start the web app
+          az webapp start --name webapp-seevak-backend --resource-group rg-seevak-care-prod || echo "App start failed, continuing..."
+          sleep 5
+          echo "✅ Conflict resolution completed"
 
-      - name: Deploy to Azure App Service (Reliable Method)
-        run: |
-          echo "🚀 Deploying to Azure App Service..."
-          
-          # Use the same method as successful azure-deploy.yml
-          az webapp deployment source config-zip \
-            --resource-group rg-seevak-care-prod \
-            --name webapp-seevak-backend \
-            --src backend-deploy.zip \
-            --timeout 600
-
-      - name: Start and verify deployment
-        run: |
-          echo "🔄 Starting and verifying deployment..."
-          
-          # Start the app
-          az webapp start --name webapp-seevak-backend --resource-group rg-seevak-care-prod
-          sleep 15
-          
-          # Check app status
-          APP_STATE=$(az webapp show \
-            --name webapp-seevak-backend \
-            --resource-group rg-seevak-care-prod \
-            --query "state" \
-            --output tsv)
-          
-          echo "App state: $APP_STATE"
-          
-          if [ "$APP_STATE" = "Running" ]; then
-            echo "✅ Deployment successful!"
-            echo "🌐 App URL: https://webapp-seevak-backend.azurewebsites.net"
-          else
-            echo "⚠️ App may still be starting up..."
-          fi
-          
-          # Test health endpoint
-          echo "🏥 Testing health endpoint..."
-          sleep 10
-          curl -f https://webapp-seevak-backend.azurewebsites.net/health || echo "Health check pending..."
+      - name: 'Deploy to Azure Web App'
+        uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
+        with:
+          app-name: 'webapp-seevak-backend'
+          slot-name: 'Production'
+          package: '.'
           
