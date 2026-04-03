@@ -10,7 +10,7 @@ A comprehensive healthcare management system built with Flask (Backend) and Flut
 - **Medical Store**: Medicine inventory, order fulfillment, delivery tracking
 - **Lab Services**: Lab test bookings, sample collection, report generation
 - **Admin Panel**: System administration, user management, analytics
-- **Real-time Notifications**: OTP verification, order updates, appointment reminders.
+- **Real-time Notifications**: OTP verification, order updates, appointment reminders
 
 ## Quick Start
 
