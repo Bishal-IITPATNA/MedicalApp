@@ -1,36 +1,24 @@
-#!/usr/bin/env python3
 """
-Azure App Service startup file for Medical App Flask Backend
-This file is used by Azure App Service to start the Flask application
+Simple startup script for Azure App Service
 """
 
 import os
 import sys
-import logging
 
-# Configure logging for Azure
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Ensure current directory is in Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
-# Add current directory to Python path for module imports
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Import and create Flask app
+from app import create_app
 
-try:
-    from app import create_app
-    logger.info("Successfully imported create_app")
-except Exception as e:
-    logger.error(f"Failed to import create_app: {e}")
-    sys.exit(1)
+app = create_app()
+application = app  # WSGI server expects 'application'
 
-# Create Flask application instance for WSGI
-# This must be at module level for gunicorn to find it
-try:
-    application = create_app()  # Use 'application' for better WSGI compatibility
-    app = application  # Keep 'app' for backward compatibility
-    logger.info("Flask app created successfully")
-except Exception as e:
-    logger.error(f"Failed to create Flask app: {e}")
-    sys.exit(1)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8000))
+    app.run(host='0.0.0.0', port=port, debug=False)
 
 # Azure App Service uses different environment variables
 port = int(os.environ.get('PORT', os.environ.get('SERVER_PORT', 8000)))
