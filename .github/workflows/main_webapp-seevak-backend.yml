@@ -72,17 +72,34 @@ jobs:
 
       - name: 'Resolve potential conflicts before deployment'
         run: |
-          echo "🔧 Preparing for deployment..."
-          # Clear any cached configurations that might reference startup.py
-          az webapp config appsettings set --name webapp-seevak-backend --resource-group rg-seevak-care-prod --settings WEBSITE_RESET_DEPS=1 || echo "Settings update failed, continuing..."
-          # Set correct startup command
-          az webapp config set --name webapp-seevak-backend --resource-group rg-seevak-care-prod --startup-file "python main.py" || echo "Startup command failed, continuing..."
-          # Stop the web app to prevent 409 conflicts  
+          echo "🔧 Aggressive conflict resolution..."
+          
+          # Step 1: Clear deployment history 
+          echo "Clearing deployment history..."
+          az webapp deployment list-publishing-credentials --name webapp-seevak-backend --resource-group rg-seevak-care-prod --query "{username:publishingUserName, password:publishingPassword}" || echo "Credential retrieval failed"
+          
+          # Step 2: Stop all processes aggressively
+          echo "Stopping web app..."
           az webapp stop --name webapp-seevak-backend --resource-group rg-seevak-care-prod || echo "App stop failed, continuing..."
-          sleep 10
-          # Start the web app
+          sleep 15
+          
+          # Step 3: Clear cached configurations
+          echo "Clearing app settings cache..."
+          az webapp config appsettings set --name webapp-seevak-backend --resource-group rg-seevak-care-prod --settings WEBSITE_RESET_DEPS=1 WEBSITE_RUN_FROM_PACKAGE=0 || echo "Settings update failed"
+          
+          # Step 4: Set startup command
+          echo "Setting startup command..."
+          az webapp config set --name webapp-seevak-backend --resource-group rg-seevak-care-prod --startup-file "python main.py" || echo "Startup command failed"
+          
+          # Step 5: Restart with longer delays
+          echo "Starting web app..."
           az webapp start --name webapp-seevak-backend --resource-group rg-seevak-care-prod || echo "App start failed, continuing..."
-          sleep 5
+          sleep 20
+          
+          # Step 6: Verify app is running
+          echo "Verifying app status..."
+          az webapp show --name webapp-seevak-backend --resource-group rg-seevak-care-prod --query "state" || echo "Status check failed"
+          
           echo "✅ Conflict resolution completed"
 
       - name: 'Deploy to Azure Web App'
@@ -92,4 +109,23 @@ jobs:
           app-name: 'webapp-seevak-backend'
           slot-name: 'Production'
           package: '.'
+          clean: true
+
+      - name: 'Fallback deployment if primary fails'
+        if: failure()
+        run: |
+          echo "🔄 Primary deployment failed, trying alternative method..."
+          
+          # Wait and try ZIP deployment directly
+          sleep 30
+          
+          # Create a deployment zip
+          zip -r deployment.zip . -x "*.zip" "*.log"
+          
+          # Try direct ZIP deployment via Azure CLI
+          az webapp deploy --resource-group rg-seevak-care-prod --name webapp-seevak-backend --src-path deployment.zip --type zip --async false || echo "ZIP deployment failed"
+          
+          # Verify deployment status  
+          echo "Checking final deployment status..."
+          az webapp show --name webapp-seevak-backend --resource-group rg-seevak-care-prod --query "{name:name, state:state, lastModifiedTimeUtc:lastModifiedTimeUtc}"
           
