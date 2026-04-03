@@ -65,22 +65,34 @@ def create_app(config_class=Config):
                 response.headers.add('Access-Control-Allow-Credentials', 'true')
             return response
     
-    # Register blueprints
-    from app.routes import auth, patient, doctor, nurse, medical_store, lab_store, admin, appointments, notifications, payments, prescriptions, patient_history, doctor_lab_tests
+    # Register blueprints - Use late imports to avoid circular imports
+    from app.routes.auth import bp as auth_bp
+    from app.routes.patient import bp as patient_bp  
+    from app.routes.doctor import bp as doctor_bp
+    from app.routes.nurse import bp as nurse_bp
+    from app.routes.medical_store import bp as medical_store_bp
+    from app.routes.lab_store import bp as lab_store_bp
+    from app.routes.admin import bp as admin_bp
+    from app.routes.appointments import bp as appointments_bp
+    from app.routes.notifications import bp as notifications_bp
+    from app.routes.payments import bp as payments_bp
+    from app.routes.prescriptions import bp as prescriptions_bp
+    from app.routes.patient_history import bp as patient_history_bp
+    from app.routes.doctor_lab_tests import bp as doctor_lab_tests_bp
     
-    app.register_blueprint(auth.bp)
-    app.register_blueprint(patient.bp)
-    app.register_blueprint(doctor.bp)
-    app.register_blueprint(nurse.bp)
-    app.register_blueprint(medical_store.bp)
-    app.register_blueprint(lab_store.bp)
-    app.register_blueprint(admin.bp)
-    app.register_blueprint(appointments.bp)
-    app.register_blueprint(notifications.bp)
-    app.register_blueprint(payments.bp)
-    app.register_blueprint(prescriptions.bp)
-    app.register_blueprint(patient_history.bp)
-    app.register_blueprint(doctor_lab_tests.bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(patient_bp)
+    app.register_blueprint(doctor_bp)
+    app.register_blueprint(nurse_bp)
+    app.register_blueprint(medical_store_bp)
+    app.register_blueprint(lab_store_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(appointments_bp)
+    app.register_blueprint(notifications_bp)
+    app.register_blueprint(payments_bp)
+    app.register_blueprint(prescriptions_bp)
+    app.register_blueprint(patient_history_bp)
+    app.register_blueprint(doctor_lab_tests_bp)
     
     # Add health check endpoint for monitoring and troubleshooting
     @app.route('/')

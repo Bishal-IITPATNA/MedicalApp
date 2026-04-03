@@ -1,33 +1,23 @@
 """
-WSGI entry point for Azure App Service
-Alternative to startup.py - provides a clean WSGI interface
+Minimal WSGI entry point for Azure App Service  
 """
 
 import os
 import sys
-import logging
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Add current directory to Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, current_dir)
 
-try:
-    from app import create_app
-    logger.info("Successfully imported create_app in wsgi.py")
-except Exception as e:
-    logger.error(f"Failed to import create_app in wsgi.py: {e}")
-    raise
+# Import Flask app factory
+from app import create_app
 
-# Create the WSGI application
-try:
-    application = create_app()
-    logger.info("Flask WSGI application created successfully")
-except Exception as e:
-    logger.error(f"Failed to create Flask WSGI application: {e}")
-    raise
+# Create application instance
+application = create_app()
+
+if __name__ == "__main__":
+    port = int(os.environ.get('PORT', 8000))
+    application.run(host='0.0.0.0', port=port, debug=False)
 
 # For backward compatibility
 app = application
