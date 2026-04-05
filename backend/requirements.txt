@@ -6,8 +6,8 @@ Flask-JWT-Extended==4.5.3
 Flask-CORS==4.0.0
 Flask-Migrate==4.0.5
 
-# Database (using SQLite for now, can upgrade to PostgreSQL later)
-# psycopg2-binary==2.9.7  # Uncomment when using PostgreSQL
+# Database - PostgreSQL for Azure (REQUIRED for production)
+psycopg2-binary==2.9.7
 
 # Production server
 gunicorn==21.2.0
