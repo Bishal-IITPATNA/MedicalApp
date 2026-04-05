@@ -35,3 +35,25 @@ class Config:
     # File Upload Configuration
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/tmp/uploads') if ENV == 'production' else 'uploads'
+
+# Azure Production Configuration
+class AzureConfig(Config):
+    """Configuration for Azure production deployment"""
+    
+    # Azure PostgreSQL connection with SSL
+    if os.environ.get('DATABASE_URL'):
+        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+        # Fix SSL requirement for Azure PostgreSQL
+        if 'sslmode' not in SQLALCHEMY_DATABASE_URI:
+            SQLALCHEMY_DATABASE_URI += '?sslmode=require'
+    
+    # Azure Blob Storage
+    AZURE_STORAGE_CONNECTION_STRING = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
+    AZURE_STORAGE_CONTAINER = 'uploads'
+    
+    # Production settings
+    ENV = 'production'
+    DEBUG = False
+    
+    # Override upload folder for Azure
+    UPLOAD_FOLDER = '/tmp/uploads'
