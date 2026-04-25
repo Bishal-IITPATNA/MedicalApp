@@ -117399,7 +117399,7 @@ return null},
 $S:9}
 A.d0.prototype={
 BA(a){if(B.e.bR(a,"http://")||B.e.bR(a,"https://"))return a
-return"/api"+a},
+return a},
 aP(a,b){return this.a88(0,b)},
 a88(a,b){var s=0,r=A.v(t.P),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f,e,d
 var $async$aP=A.w(function(c,a0){if(c===1){o.push(a0)
@@ -117670,7 +117670,7 @@ aBr(a,b){var s=0,r=A.v(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g,f
 var $async$EX=A.w(function(c,d){if(c===1){o.push(d)
 s=p}for(;;)switch(s){case 0:p=4
 A.ab("\ud83d\udd0d AuthService: checkUserRoles called for: "+a)
-j=A.e0("/api/api/auth/check-roles",0,null)
+j=A.e0("/api/auth/check-roles",0,null)
 i=t.N
 h=A.T(["Content-Type","application/json"],i,i)
 s=7
@@ -117713,7 +117713,7 @@ aHv(a,b,c){var s=0,r=A.v(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g,f,e
 var $async$oZ=A.w(function(d,a0){if(d===1){o.push(a0)
 s=p}for(;;)switch(s){case 0:p=4
 A.ab("\ud83d\udd0d AuthService: loginWithRole called with role: "+c)
-i=A.e0("/api/api/auth/login",0,null)
+i=A.e0("/api/auth/login",0,null)
 h=t.N
 g=A.T(["Content-Type","application/json"],h,h)
 s=7
@@ -117771,9 +117771,9 @@ pc(a,b){return this.aJE(0,b)},
 aJE(a2,a3){var s=0,r=A.v(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1
 var $async$pc=A.w(function(a5,a6){if(a5===1){o.push(a6)
 s=p}for(;;)switch(s){case 0:p=4
-A.ab("\ud83d\udd0d Sending registration request to: /api/api/auth/register")
+A.ab("\ud83d\udd0d Sending registration request to: /api/auth/register")
 A.ab("\ud83d\udd0d Request data: "+a3.k(0))
-g=A.e0("/api/api/auth/register",0,null)
+g=A.e0("/api/auth/register",0,null)
 f=t.N
 e=A.T(["Content-Type","application/json"],f,f)
 s=7
@@ -117876,7 +117876,7 @@ pm(a,b,c){return this.aL1(a,b,c)},
 aL1(a,b,c){var s=0,r=A.v(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g,f,e
 var $async$pm=A.w(function(d,a0){if(d===1){o.push(a0)
 s=p}for(;;)switch(s){case 0:p=4
-i=A.e0("/api/api/auth/verify-otp",0,null)
+i=A.e0("/api/auth/verify-otp",0,null)
 h=t.N
 g=A.T(["Content-Type","application/json"],h,h)
 s=7
@@ -117929,7 +117929,7 @@ HE(a,b){return this.aK3(a,b)},
 aK3(a,b){var s=0,r=A.v(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g,f
 var $async$HE=A.w(function(c,d){if(c===1){o.push(d)
 s=p}for(;;)switch(s){case 0:p=4
-j=A.e0("/api/api/auth/resend-otp",0,null)
+j=A.e0("/api/auth/resend-otp",0,null)
 i=t.N
 h=A.T(["Content-Type","application/json"],i,i)
 s=7
@@ -118008,7 +118008,7 @@ if(m==null){q=!1
 s=1
 break}i=t.N
 s=8
-return A.q(A.mJ(A.e0("/api/api/auth/refresh",0,null),null,A.T(["Content-Type","application/json","Authorization","Bearer "+m],i,i)),$async$mi)
+return A.q(A.mJ(A.e0("/api/auth/refresh",0,null),null,A.T(["Content-Type","application/json","Authorization","Bearer "+m],i,i)),$async$mi)
 case 8:l=b
 s=l.b===200?9:10
 break
@@ -118044,7 +118044,7 @@ yW(a){return this.aEN(a)},
 aEN(a){var s=0,r=A.v(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g,f
 var $async$yW=A.w(function(b,c){if(b===1){o.push(c)
 s=p}for(;;)switch(s){case 0:p=4
-j=A.e0("/api/api/auth/forgot-password",0,null)
+j=A.e0("/api/auth/forgot-password",0,null)
 i=t.N
 h=A.T(["Content-Type","application/json"],i,i)
 s=7
@@ -118082,7 +118082,7 @@ Af(a,b,c){return this.aL2(a,b,c)},
 aL2(a,b,c){var s=0,r=A.v(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g,f
 var $async$Af=A.w(function(d,e){if(d===1){o.push(e)
 s=p}for(;;)switch(s){case 0:p=4
-j=A.e0("/api/api/auth/verify-password-reset-otp",0,null)
+j=A.e0("/api/auth/verify-password-reset-otp",0,null)
 i=t.N
 h=A.T(["Content-Type","application/json"],i,i)
 s=7
@@ -118120,7 +118120,7 @@ HF(a,b){return this.aK4(a,b)},
 aK4(a,b){var s=0,r=A.v(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g,f
 var $async$HF=A.w(function(c,d){if(c===1){o.push(d)
 s=p}for(;;)switch(s){case 0:p=4
-j=A.e0("/api/api/auth/resend-password-reset-otp",0,null)
+j=A.e0("/api/auth/resend-password-reset-otp",0,null)
 i=t.N
 h=A.T(["Content-Type","application/json"],i,i)
 s=7
@@ -118158,7 +118158,7 @@ zU(a,b){return this.aK5(a,b)},
 aK5(a,b){var s=0,r=A.v(t.P),q,p=2,o=[],n,m,l,k,j,i,h,g,f
 var $async$zU=A.w(function(c,d){if(c===1){o.push(d)
 s=p}for(;;)switch(s){case 0:p=4
-j=A.e0("/api/api/auth/reset-password",0,null)
+j=A.e0("/api/auth/reset-password",0,null)
 i=t.N
 h=A.T(["Content-Type","application/json"],i,i)
 s=7

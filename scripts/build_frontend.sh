@@ -19,8 +19,9 @@ fi
 
 cd "$APP_DIR"
 flutter pub get
-# /api is a relative URL so the same build works for preview AND production
-flutter build web --release --dart-define=API_BASE_URL=/api
+# Empty base means the Flutter app calls "/api/auth/login" (host-relative),
+# so the same build works for preview AND production.
+flutter build web --release --dart-define=API_BASE_URL=
 
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
