@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Seevak Care - Healthcare Management System">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Seevak Care">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Seevak Care</title>
+  <link rel="manifest" href="manifest.json">
+
+  <script>
+    // Workaround for the Dart `intl` startup crash on browsers that report
+    // an empty or non-canonical navigator.language ("Invalid argument(s):
+    // Incorrect locale information provided"). Force a sane default early.
+    (function () {
+      try {
+        var lang = (navigator.language || '').trim();
+        var ok = /^[a-zA-Z]{2,3}(-[A-Za-z0-9]+)*$/.test(lang);
+        if (!ok) {
+          Object.defineProperty(navigator, 'language',  { get: function () { return 'en-US'; } });
+          Object.defineProperty(navigator, 'languages', { get: function () { return ['en-US', 'en']; } });
+        }
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

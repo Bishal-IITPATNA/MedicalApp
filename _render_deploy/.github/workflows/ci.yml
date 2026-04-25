@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  # --------------------------------------------------------------
+  # Backend - install + import-check + smoke imports
+  # --------------------------------------------------------------
+  backend:
+    name: Backend (Flask)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile-check all Python sources
+        run: python -m compileall -q .
+
+      - name: Import the Flask app factory
+        env:
+          DATABASE_URL: "sqlite:///ci.db"
+          JWT_SECRET_KEY: "ci-jwt"
+          SECRET_KEY: "ci-app"
+        run: |
+          python -c "from app import create_app; app = create_app(); print('Routes:', len(list(app.url_map.iter_rules())))"
+
+  # --------------------------------------------------------------
+  # Frontend - flutter analyze + flutter build web
+  # --------------------------------------------------------------
+  frontend:
+    name: Frontend (Flutter Web)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter 3.41.6
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.6"
+          channel: stable
+          cache: true
+
+      - name: Install pub dependencies
+        run: flutter pub get
+
+      - name: Analyze (non-blocking)
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
+
+      - name: Build web (preview-style, just to verify it compiles)
+        run: flutter build web --release --dart-define=API_BASE_URL=
+
+      - name: Upload web build as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-web-build
+          path: frontend/build/web
+          retention-days: 7

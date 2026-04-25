@@ -1,0 +1,62 @@
+# Render Blueprint for Seevak Care
+# https://render.com/docs/blueprint-spec
+# Place this file at the ROOT of the GitHub repo.
+
+services:
+  # ------------------------------------------------------------------
+  # Backend - Flask API
+  # ------------------------------------------------------------------
+  - type: web
+    name: seevak-backend
+    runtime: python
+    plan: free
+    region: singapore        # Closest to the Supabase ap-northeast-1 region
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn "app:create_app()" --bind 0.0.0.0:$PORT --workers 2 --timeout 60 --access-logfile -
+    healthCheckPath: /api/health
+    autoDeploy: false        # Deploys are triggered by the GitHub Actions workflow
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.10"
+      - key: DATABASE_URL
+        sync: false          # Set this in the Render dashboard (Supabase URL)
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: SECRET_KEY
+        generateValue: true
+      - key: APP_PUBLIC_URL
+        sync: false          # Set to the public frontend URL once known
+      - key: SEED_DEFAULT_USERS
+        value: "true"        # First boot will create the 5 README users
+
+  # ------------------------------------------------------------------
+  # Frontend - Flutter Web (static site)
+  # ------------------------------------------------------------------
+  - type: web
+    name: seevak-frontend
+    runtime: static
+    plan: free
+    rootDir: frontend
+    buildCommand: bash render-build.sh
+    staticPublishPath: build/web
+    autoDeploy: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
+      - path: /canvaskit/*
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
+      - path: /index.html
+        name: Cache-Control
+        value: "no-cache"
+    envVars:
+      - key: FLUTTER_VERSION
+        value: "3.41.6"
+      - key: API_BASE_URL
+        sync: false          # Set to the full backend URL, e.g. https://seevak-backend.onrender.com

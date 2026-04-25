@@ -1,0 +1,64 @@
+name: Deploy to Render
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:        # Allow manual deploys from the Actions tab
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # --------------------------------------------------------------
+  # Reuse CI as a gate. If CI fails, no deploy.
+  # --------------------------------------------------------------
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy-backend:
+    needs: ci
+    name: Trigger Render deploy - backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit backend deploy hook
+        env:
+          HOOK: ${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::RENDER_BACKEND_DEPLOY_HOOK secret is not set"
+            exit 1
+          fi
+          curl --fail --silent --show-error -X POST "$HOOK"
+          echo "Backend deploy triggered."
+
+  deploy-frontend:
+    needs: ci
+    name: Trigger Render deploy - frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit frontend deploy hook
+        env:
+          HOOK: ${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::RENDER_FRONTEND_DEPLOY_HOOK secret is not set"
+            exit 1
+          fi
+          curl --fail --silent --show-error -X POST "$HOOK"
+          echo "Frontend deploy triggered."
+
+  notify:
+    needs: [deploy-backend, deploy-frontend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "## Deploy summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend:  ${{ needs.deploy-backend.result }}"  >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: ${{ needs.deploy-frontend.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "Render will take 2-5 minutes to finish each build." >> $GITHUB_STEP_SUMMARY
