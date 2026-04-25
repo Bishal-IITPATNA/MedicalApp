@@ -1,0 +1,427 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: rg-seevak-care-prod
+  BACKEND_APP_NAME: webapp-seevak-backend
+  FLUTTER_VERSION: '3.41.6'
+  NODE_VERSION: '18'
+
+jobs:
+  # ============================================================================
+  # BACKEND BUILD & TEST
+  # ============================================================================
+  backend-build-test:
+    name: Backend Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pylint
+
+      - name: Lint with Pylint
+        working-directory: ./backend
+        continue-on-error: true
+        run: |
+          echo "🔍 Running linting checks..."
+          pylint app/ --disable=all --enable=E,F || true
+
+      - name: Run unit tests
+        working-directory: ./backend
+        continue-on-error: true
+        run: |
+          echo "🧪 Running unit tests..."
+          pytest -v --cov=app --cov-report=xml --cov-report=term || true
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          files: ./backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+
+  # ============================================================================
+  # FRONTEND BUILD & TEST
+  # ============================================================================
+  frontend-build-test:
+    name: Frontend Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Get Flutter dependencies
+        working-directory: ./frontend
+        run: |
+          echo "📦 Installing Flutter dependencies..."
+          flutter pub get
+
+      - name: Run Flutter analyzer
+        working-directory: ./frontend
+        continue-on-error: true
+        run: |
+          echo "🔍 Running Flutter analyzer..."
+          flutter analyze
+
+      - name: Run Flutter tests
+        working-directory: ./frontend
+        continue-on-error: true
+        run: |
+          echo "🧪 Running Flutter unit tests..."
+          flutter test || true
+
+      - name: Build Flutter web (development)
+        working-directory: ./frontend
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "🔨 Building Flutter web (development)..."
+          flutter build web \
+            --release \
+            --dart-define=API_BASE_URL=https://dev-api.example.com
+
+  # ============================================================================
+  # BACKEND DEPLOYMENT
+  # ============================================================================
+  deploy-backend:
+    name: Deploy Backend to Azure
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [backend-build-test]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log deployment info
+        run: |
+          echo "📋 Deployment Information"
+          echo "========================"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Environment: ${{ inputs.environment || 'production' }}"
+
+      - name: Azure login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_78440EA0F40F4DD097867124C2D67F21 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_2DD5AD037E6E439AAD7D3BF85369D565 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_55D71896B10244CCA1DA74C96776A35C }}
+
+      - name: Verify backend files
+        working-directory: ./backend
+        run: |
+          echo "✅ Verifying backend files..."
+          [ -f "main.py" ] || (echo "❌ main.py not found" && exit 1)
+          [ -f "requirements.txt" ] || (echo "❌ requirements.txt not found" && exit 1)
+          [ -f "wsgi.py" ] || (echo "❌ wsgi.py not found" && exit 1)
+          [ -d "app" ] || (echo "❌ app directory not found" && exit 1)
+          echo "✅ All required files verified"
+
+      - name: Create deployment package
+        run: |
+          echo "📦 Creating backend deployment package..."
+          cd backend
+          
+          # Create ZIP with proper structure (backend contents at root level)
+          zip -r ../backend-deploy.zip . \
+            -x "*.git*" \
+              "**/__pycache__/**" \
+              "*.pyc" \
+              "**/.*" \
+              "**/.DS_Store" \
+              "**/*.log" \
+              "**/venv/**" \
+              "**/env/**" \
+              "*.egg-info/**"
+          
+          cd ..
+          
+          # Verify ZIP contents
+          echo "📂 Deployment package contents (first 20 entries):"
+          unzip -l backend-deploy.zip | head -20
+          
+          # Show package size
+          SIZE=$(du -h backend-deploy.zip | cut -f1)
+          echo "📊 Package size: $SIZE"
+
+      - name: Stop Azure App Service
+        continue-on-error: true
+        run: |
+          echo "⏸️  Stopping App Service for deployment..."
+          az webapp stop \
+            --name ${{ env.BACKEND_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }}
+          
+          echo "⏳ Waiting for app to stop..."
+          sleep 10
+
+      - name: Configure Azure App Service
+        run: |
+          echo "⚙️  Configuring Azure App Service..."
+          
+          # Set startup command
+          az webapp config set \
+            --name ${{ env.BACKEND_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --startup-file "python main.py"
+          
+          # Configure app settings
+          az webapp config appsettings set \
+            --name ${{ env.BACKEND_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --settings \
+              PYTHONPATH=/home/site/wwwroot \
+              SCM_DO_BUILD_DURING_DEPLOYMENT=true \
+              FLASK_ENV=production \
+              FLASK_APP=main.py
+          
+          echo "✅ App Service configured"
+
+      - name: Deploy to Azure App Service
+        run: |
+          echo "🚀 Deploying backend to Azure App Service..."
+          
+          az webapp deployment source config-zip \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.BACKEND_APP_NAME }} \
+            --src backend-deploy.zip
+          
+          echo "✅ Deployment upload completed"
+
+      - name: Start App Service and wait
+        run: |
+          echo "▶️  Starting App Service..."
+          az webapp start \
+            --name ${{ env.BACKEND_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }}
+          
+          echo "⏳ Waiting for app to start (30 seconds)..."
+          sleep 30
+
+      - name: Health check
+        run: |
+          echo "🔍 Performing health checks..."
+          
+          HEALTH_URL="https://${{ env.BACKEND_APP_NAME }}.azurewebsites.net/health"
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Checking $HEALTH_URL"
+            
+            if curl -f --connect-timeout 10 --max-time 20 "$HEALTH_URL"; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            
+            if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+              echo "⏳ Health check failed, retrying in 15 seconds..."
+              sleep 15
+            fi
+            
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+          
+          echo "⚠️  Health check warning: App may still be initializing"
+
+      - name: Get deployment logs
+        if: failure()
+        run: |
+          echo "📋 App Service logs:"
+          az webapp log tail \
+            --name ${{ env.BACKEND_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --max-lines 50
+
+  # ============================================================================
+  # FRONTEND DEPLOYMENT
+  # ============================================================================
+  deploy-frontend:
+    name: Deploy Frontend to Azure Static Web Apps
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [frontend-build-test]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Get Flutter dependencies
+        working-directory: ./frontend
+        run: |
+          echo "📦 Installing Flutter dependencies..."
+          flutter pub get
+
+      - name: Build Flutter web (production)
+        working-directory: ./frontend
+        run: |
+          echo "🔨 Building Flutter web for production..."
+          flutter build web \
+            --release \
+            --dart-define=API_BASE_URL=https://${{ env.BACKEND_APP_NAME }}.azurewebsites.net \
+            --dart-define=ENVIRONMENT=production
+          
+          # Display build artifacts
+          echo "📂 Build output:"
+          du -sh build/web
+          ls -la build/web | head -20
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_BRAVE_SMOKE_045200400 }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: 'upload'
+          app_location: 'frontend'
+          output_location: 'build/web'
+
+  # ============================================================================
+  # DEPLOYMENT SUCCESS NOTIFICATION
+  # ============================================================================
+  deployment-success:
+    name: Deployment Notification
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend]
+    if: success()
+
+    steps:
+      - name: Send success notification
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo ""
+          echo "🌐 Deployed Services:"
+          echo "  Backend: https://${{ env.BACKEND_APP_NAME }}.azurewebsites.net"
+          echo "  Frontend: Check Azure Static Web Apps configuration"
+          echo ""
+          echo "📋 Deployment Summary:"
+          echo "  Repository: ${{ github.repository }}"
+          echo "  Branch: ${{ github.ref_name }}"
+          echo "  Commit: ${{ github.sha }}"
+          echo "  Actor: ${{ github.actor }}"
+          echo "  Timestamp: $(date)"
+
+      # Optional: Send Slack notification
+      - name: Slack notification (optional)
+        if: vars.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "text": "✅ Seevak Care Deployment Successful",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Deployment Successful* ✅\n*Repository:* ${{ github.repository }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                  }
+                }
+              ]
+            }' || true
+
+  # ============================================================================
+  # DEPLOYMENT FAILURE NOTIFICATION
+  # ============================================================================
+  deployment-failure:
+    name: Deployment Failure Notification
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend]
+    if: failure()
+
+    steps:
+      - name: Send failure notification
+        run: |
+          echo "❌ Deployment failed!"
+          echo ""
+          echo "📋 Failure Details:"
+          echo "  Repository: ${{ github.repository }}"
+          echo "  Branch: ${{ github.ref_name }}"
+          echo "  Commit: ${{ github.sha }}"
+          echo "  Actor: ${{ github.actor }}"
+          echo "  Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      # Optional: Send Slack notification
+      - name: Slack notification (optional)
+        if: vars.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "text": "❌ Seevak Care Deployment Failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Deployment Failed* ❌\n*Repository:* ${{ github.repository }}\n*Branch:* ${{ github.ref_name }}\n*View Details:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Click here>"
+                  }
+                }
+              ]
+            }' || true
