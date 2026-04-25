@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Authentication</title>
+</head>
+<body>
+    <h1>Debug Medical Store Authentication</h1>
+    <div id="output"></div>
+    
+    <script>
+        // Check if we have tokens in local storage
+        function checkTokens() {
+            const localStorage = window.localStorage;
+            const accessToken = localStorage.getItem('flutter.access_token');
+            const refreshToken = localStorage.getItem('flutter.refresh_token');
+            const userData = localStorage.getItem('flutter.user_data');
+            
+            console.log('Access Token:', accessToken);
+            console.log('Refresh Token:', refreshToken);
+            console.log('User Data:', userData);
+            
+            const output = document.getElementById('output');
+            output.innerHTML = `
+                <p><strong>Access Token:</strong> ${accessToken ? 'Present (' + accessToken.substring(0, 50) + '...)' : 'Not found'}</p>
+                <p><strong>Refresh Token:</strong> ${refreshToken ? 'Present (' + refreshToken.substring(0, 50) + '...)' : 'Not found'}</p>
+                <p><strong>User Data:</strong> ${userData || 'Not found'}</p>
+            `;
+            
+            // Try to call the medicine catalog API
+            if (accessToken) {
+                testAPI(accessToken);
+            }
+        }
+        
+        async function testAPI(token) {
+            try {
+                const response = await fetch('http://localhost:5001/api/admin/medicine-catalog', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.text();
+                console.log('API Response:', response.status, result);
+                
+                const output = document.getElementById('output');
+                output.innerHTML += `
+                    <h3>API Test Result:</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Response:</strong> ${result.substring(0, 500)}...</p>
+                `;
+            } catch (error) {
+                console.error('API Error:', error);
+                const output = document.getElementById('output');
+                output.innerHTML += `
+                    <h3>API Test Error:</h3>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+        
+        // Run when page loads
+        document.addEventListener('DOMContentLoaded', checkTokens);
+    </script>
+</body>
+</html>

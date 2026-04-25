@@ -1,0 +1,22 @@
+{
+  "routes": [
+    {
+      "route": "/*",
+      "serve": "/index.html",
+      "statusCode": 200
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/assets/*", "/icons/*", "/canvaskit/*", "*.js", "*.css", "*.json", "*.wasm"]
+  },
+  "mimeTypes": {
+    ".json": "application/json",
+    ".js": "application/javascript",
+    ".css": "text/css",
+    ".wasm": "application/wasm"
+  },
+  "globalHeaders": {
+    "Cache-Control": "no-cache"
+  }
+}
