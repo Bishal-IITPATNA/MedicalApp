@@ -147,12 +147,18 @@ def create_app(config_class=Config):
         return {"error": "Not found"}, 404
 
     # ------------------------------------------------------------------
-    # First-boot bootstrap: create tables and (optionally) seed default
-    # users so a brand-new Render deployment is usable out of the box.
+    # First-boot bootstrap: create tables, run idempotent ADD COLUMN
+    # migrations, and (optionally) seed default users so a brand-new
+    # Render deployment is usable out of the box.
     # ------------------------------------------------------------------
     with app.app_context():
         try:
             db.create_all()
+            try:
+                from app.migrations_runtime import run_pending_migrations
+                run_pending_migrations(db)
+            except Exception as exc:  # pragma: no cover
+                app.logger.warning("Runtime migrations skipped/failed: %s", exc)
             if os.environ.get("SEED_DEFAULT_USERS", "false").lower() == "true":
                 try:
                     from seed_default_users import seed  # local module

@@ -146,5 +146,14 @@ def create_app(config_class=Config):
     @app.errorhandler(404)
     def not_found(error):
         return {'error': 'Not found', 'message': 'The requested resource was not found'}, 404
-    
+
+    # Apply lightweight, idempotent ADD COLUMN migrations on every boot
+    # so newly-introduced columns appear on existing deployments.
+    with app.app_context():
+        try:
+            from app.migrations_runtime import run_pending_migrations
+            run_pending_migrations(db)
+        except Exception as exc:  # pragma: no cover
+            app.logger.exception("Runtime migrations failed: %s", exc)
+
     return app

@@ -107,9 +107,17 @@ available from the **Actions** tab → *Deploy to Render* →
 
 | File                                    | Why                                                                                                |
 |-----------------------------------------|----------------------------------------------------------------------------------------------------|
-| `backend/app/__init__.py`               | Generic env-driven CORS that allows `*.onrender.com` + `APP_PUBLIC_URL`; `/api/health` route; first-boot `db.create_all()` and optional seeding. |
+| `backend/app/__init__.py`               | Generic env-driven CORS that allows `*.onrender.com` + `APP_PUBLIC_URL`; `/api/health` route; first-boot `db.create_all()`, runtime migrations and optional seeding. |
+| `backend/app/migrations_runtime.py`     | Idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` runner invoked on every boot so new columns appear on existing DBs without manual SQL. |
+| `backend/app/models/medicine.py`        | `MedicineOrder` gets `prescription_image` (TEXT), `prescription_filename` (VARCHAR), `prescription_uploaded_at` (TIMESTAMP). `to_dict()` exposes `has_prescription`. |
+| `backend/app/models/lab.py`             | Same three prescription columns on `LabTestOrder`. |
+| `backend/app/routes/patient.py`         | Medicine-order + lab-test-booking endpoints accept optional `prescription_image` (base64 data URL) + `prescription_filename`. New GET endpoints `/api/patient/medicine-orders/<id>/prescription` and `/api/patient/lab-orders/<id>/prescription` return the stored file. 3 MB / JPG/PNG/WEBP/PDF validation server-side. |
 | `backend/seed_default_users.py`         | Idempotent seed for the 5 README accounts. Runs on first boot when `SEED_DEFAULT_USERS=true`.       |
 | `backend/requirements.txt`              | Added `psycopg2-binary` for Postgres; uncommented `gunicorn`.                                       |
+| `frontend/lib/widgets/prescription_picker.dart` | Reusable "Upload prescription" widget (file_picker + client-side 3 MB / MIME check). |
+| `frontend/lib/screens/patient/buy_medicine_screen.dart` | Hosts the `PrescriptionPicker` and forwards the selected file to the home-delivery / selected-store order payloads. |
+| `frontend/lib/screens/patient/select_medical_store_screen.dart` | Accepts optional prescription params and attaches them to `POST /api/patient/medicine-orders`. |
+| `frontend/lib/screens/patient/lab_test_booking_screen.dart` | Hosts the `PrescriptionPicker` in the booking dialog and forwards the file to `POST /api/patient/lab-tests/book`. |
 | `frontend/lib/main.dart`                | `Intl.defaultLocale = 'en_US'` so the app boots on browsers with weird/empty locale.                |
 | `frontend/web/index.html`               | `navigator.language` shim covering the same edge case before Dart starts.                           |
 | `frontend/render-build.sh`              | Render Static-Site build hook: installs Flutter, builds `web/`, injects the locale shim if missing. |
