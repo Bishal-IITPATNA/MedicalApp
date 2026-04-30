@@ -55,13 +55,17 @@ fail until you finish step 3 below — that's expected the first time).
    - `seevak-backend`  (Python web service)
    - `seevak-frontend` (Static site)
 3. Click **Apply**. Both services will be created.
-4. **Set the three sync-false env vars** in the Render dashboard:
+4. **Set the sync-false env vars** in the Render dashboard:
    - On `seevak-backend`:
      - `DATABASE_URL` →
        `postgresql://postgres.hhofsaggdvflmnfduudt:Iitp988325%21%40%23%24@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres`
        *(URL-encoded password — please rotate this in Supabase before going live)*
      - `APP_PUBLIC_URL` → the URL Render gives the frontend
        (e.g. `https://seevak-frontend.onrender.com`).
+     - `SMTP_USERNAME` → `seevakcare@gmail.com`
+     - `SMTP_PASSWORD` → Gmail *App Password* (16 chars, e.g.
+       `ibxatpdquxonotbl`, **no spaces**). Obtain a new one here:
+       <https://myaccount.google.com/apppasswords>.
    - On `seevak-frontend`:
      - `API_BASE_URL` → the URL Render gives the backend without a trailing slash
        (e.g. `https://seevak-backend.onrender.com`).
@@ -112,6 +116,9 @@ available from the **Actions** tab → *Deploy to Render* →
 | `backend/app/models/medicine.py`        | `MedicineOrder` gets `prescription_image` (TEXT), `prescription_filename` (VARCHAR), `prescription_uploaded_at` (TIMESTAMP). `to_dict()` exposes `has_prescription`. |
 | `backend/app/models/lab.py`             | Same three prescription columns on `LabTestOrder`. |
 | `backend/app/routes/patient.py`         | Medicine-order + lab-test-booking endpoints accept optional `prescription_image` (base64 data URL) + `prescription_filename`. New GET endpoints `/api/patient/medicine-orders/<id>/prescription` and `/api/patient/lab-orders/<id>/prescription` return the stored file. 3 MB / JPG/PNG/WEBP/PDF validation server-side. |
+| `backend/app/services/notification_service.py` | Real Gmail SMTP sender (uses `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`). Rebranded copy to "Seevak Care". Falls back to simulated log-only send if SMTP env vars are missing. |
+| `frontend/lib/screens/auth/otp_verification_screen.dart` | Registration verification screen — SMS radio removed, now email-only. |
+| `frontend/lib/screens/auth/password_reset_otp_screen.dart` | Password reset screen — SMS choice-chip removed, email-only. |
 | `backend/seed_default_users.py`         | Idempotent seed for the 5 README accounts. Runs on first boot when `SEED_DEFAULT_USERS=true`.       |
 | `backend/requirements.txt`              | Added `psycopg2-binary` for Postgres; uncommented `gunicorn`.                                       |
 | `frontend/lib/widgets/prescription_picker.dart` | Reusable "Upload prescription" widget (file_picker + client-side 3 MB / MIME check). |

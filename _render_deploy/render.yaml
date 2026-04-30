@@ -30,6 +30,20 @@ services:
       - key: SEED_DEFAULT_USERS
         value: "true"        # First boot will create the 5 README users
 
+      # -- Gmail SMTP (production OTP emails) -----------------------
+      # NOTE: leave `SMTP_USERNAME`/`SMTP_PASSWORD` as sync: false so
+      # they're set once in the Render dashboard, never committed.
+      - key: SMTP_HOST
+        value: "smtp.gmail.com"
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_FROM_NAME
+        value: "Seevak Care"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+
   # ------------------------------------------------------------------
   # Frontend - Flutter Web (static site)
   # ------------------------------------------------------------------
