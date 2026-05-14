@@ -73,6 +73,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Container(
+                  height: 80,
+                  width: 110,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 24),
             child: Form(
               key: _formKey,
               child: Column(

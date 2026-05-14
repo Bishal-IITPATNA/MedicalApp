@@ -199,7 +199,8 @@ This project is licensed under the MIT License.
 ## Support
 
 For support and questions:
-- Email: support@medicalapp.com
+- Email: seevakcare@gmail.com
+- Phone: +91 9771365160
 - GitHub Issues: [Repository Issues]
 - Documentation: See docs/ folder
 

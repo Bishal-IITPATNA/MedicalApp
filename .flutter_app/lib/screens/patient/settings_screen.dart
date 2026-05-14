@@ -122,9 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.privacy_tip),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Privacy policy coming soon')),
-              );
+              _showPrivacyPolicy();
             },
           ),
           ListTile(
@@ -132,9 +130,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.description),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Terms & conditions coming soon')),
-              );
+              _showTermsAndConditions();
             },
           ),
           const Divider(),
@@ -161,7 +157,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Support contact: support@medicalapp.com')),
+                const SnackBar(content: Text('Email: seevakcare@gmail.com | Phone: +91 9771365160')),
               );
             },
           ),
@@ -333,6 +329,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
               foregroundColor: Colors.white,
             ),
             child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyPolicy() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Privacy Policy'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Privacy Policy',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Last Updated: May 2026\n\n'
+                'At SeevakCare, we are committed to protecting your privacy and ensuring you have a positive experience on our platform.\n\n'
+                '1. Information We Collect\n'
+                'We collect personal information necessary to provide healthcare services, including but not limited to:\n'
+                '- Name, email address, and phone number\n'
+                '- Medical history and health information\n'
+                '- Appointment and payment information\n\n'
+                '2. How We Use Your Information\n'
+                'Your information is used to:\n'
+                '- Provide and improve our services\n'
+                '- Process appointments and payments\n'
+                '- Send notifications and updates\n'
+                '- Comply with legal obligations\n\n'
+                '3. Data Security\n'
+                'We implement appropriate security measures to protect your personal information.\n\n'
+                '4. Contact Us\n'
+                'For privacy concerns, please contact us at:\n'
+                'Email: seevakcare@gmail.com\n'
+                'Phone: +91 9771365160',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTermsAndConditions() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Terms & Conditions'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Terms & Conditions',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Last Updated: May 2026\n\n'
+                '1. Acceptance of Terms\n'
+                'By using SeevakCare, you agree to these terms and conditions.\n\n'
+                '2. User Responsibilities\n'
+                'You are responsible for:\n'
+                '- Providing accurate information\n'
+                '- Maintaining confidentiality of your account\n'
+                '- Using the service lawfully\n\n'
+                '3. Service Limitation\n'
+                'SeevakCare is a healthcare management platform. Always consult healthcare professionals for medical advice.\n\n'
+                '4. Payment Terms\n'
+                'All payments must be completed as per the booking or order confirmation.\n\n'
+                '5. Cancellation and Refunds\n'
+                'Cancellation and refund policies are as per the specific service booked.\n\n'
+                '6. Limitation of Liability\n'
+                'SeevakCare shall not be liable for indirect or consequential damages.\n\n'
+                '7. Contact Support\n'
+                'For questions regarding these terms:\n'
+                'Email: seevakcare@gmail.com\n'
+                'Phone: +91 9771365160',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
           ),
         ],
       ),

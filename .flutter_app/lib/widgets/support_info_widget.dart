@@ -80,7 +80,7 @@ class SupportInfoWidget extends StatelessWidget {
             GestureDetector(
               onTap: () => _launchPhone(),
               child: Text(
-                '+91 9883258362',
+                '+91 9771365160',
                 style: TextStyle(
                   color: Colors.green[700],
                   decoration: TextDecoration.underline,
@@ -111,7 +111,7 @@ class SupportInfoWidget extends StatelessWidget {
   void _launchPhone() async {
     final Uri phoneUri = Uri(
       scheme: 'tel',
-      path: '+919883258362',
+      path: '+919771365160',
     );
     
     try {

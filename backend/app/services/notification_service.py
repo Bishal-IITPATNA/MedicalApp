@@ -219,7 +219,7 @@ Your OTP for password reset is: {otp}
 
 This OTP will expire in 10 minutes.
 
-If you did not request this password reset, please ignore this email or contact support if you have concerns.
+If you did not request this password reset, please ignore this email or contact support at seevakcare@gmail.com or +91 9771365160 if you have concerns.
 
 Best regards,
 Medical App Team
@@ -263,7 +263,7 @@ Medical App Team
                 <div class="warning">
                     <p style="color: #856404; margin: 0;">
                         <strong>Security Notice:</strong> If you did not request this password reset, 
-                        please ignore this email or contact support immediately if you have concerns.
+                        please ignore this email or contact support immediately at seevakcare@gmail.com (+91 9771365160) if you have concerns.
                     </p>
                 </div>
                 

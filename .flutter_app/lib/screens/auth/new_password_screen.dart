@@ -119,13 +119,18 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
                   decoration: InputDecoration(
                     labelText: 'New Password',
                     prefixIcon: const Icon(Icons.lock),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        color: Colors.blue,
                       ),
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
                       },
+                      tooltip: _obscurePassword ? 'Show password' : 'Hide password',
                     ),
                   ),
                   validator: (value) {
@@ -145,13 +150,18 @@ class _NewPasswordScreenState extends State<NewPasswordScreen> {
                   decoration: InputDecoration(
                     labelText: 'Confirm New Password',
                     prefixIcon: const Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                        color: Colors.blue,
                       ),
                       onPressed: () {
                         setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
                       },
+                      tooltip: _obscureConfirmPassword ? 'Show password' : 'Hide password',
                     ),
                   ),
                   validator: (value) {

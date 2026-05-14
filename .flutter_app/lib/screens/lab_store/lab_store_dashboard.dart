@@ -1098,9 +1098,7 @@ class _LabStoreDashboardState extends State<LabStoreDashboard> {
           leading: const Icon(Icons.privacy_tip),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Privacy policy coming soon')),
-            );
+            _showPrivacyPolicy();
           },
         ),
         ListTile(
@@ -1108,9 +1106,7 @@ class _LabStoreDashboardState extends State<LabStoreDashboard> {
           leading: const Icon(Icons.description),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Terms & conditions coming soon')),
-            );
+            _showTermsAndConditions();
           },
         ),
         const Divider(),
@@ -1206,6 +1202,109 @@ class _LabStoreDashboardState extends State<LabStoreDashboard> {
               );
             },
             child: const Text('Change'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyPolicy() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Privacy Policy'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Privacy Policy',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Last Updated: May 2026\n\n'
+                'At SeevakCare, we are committed to protecting your privacy and ensuring you have a positive experience on our platform.\n\n'
+                '1. Information We Collect\n'
+                'We collect information necessary to provide laboratory services, including:\n'
+                '- Lab facility details and test information\n'
+                '- Patient and customer information\n'
+                '- Payment and transaction records\n'
+                '- Appointment scheduling data\n\n'
+                '2. How We Use Your Information\n'
+                'Your information is used to:\n'
+                '- Provide laboratory services\n'
+                '- Process test bookings and payments\n'
+                '- Send notifications and updates\n'
+                '- Maintain service quality and compliance\n\n'
+                '3. Data Security\n'
+                'We implement appropriate security measures to protect all information.\n\n'
+                '4. Contact Us\n'
+                'For privacy concerns:\n'
+                'Email: seevakcare@gmail.com\n'
+                'Phone: +91 9771365160',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTermsAndConditions() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Terms & Conditions'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Terms & Conditions',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Last Updated: May 2026\n\n'
+                '1. Acceptance of Terms\n'
+                'By using SeevakCare Lab Services, you agree to these terms and conditions.\n\n'
+                '2. Lab Partner Responsibilities\n'
+                'Lab partners agree to:\n'
+                '- Provide accurate test information\n'
+                '- Maintain professional standards\n'
+                '- Adhere to healthcare regulations\n'
+                '- Protect patient privacy\n\n'
+                '3. Service Terms\n'
+                'All laboratory services are provided as described in the platform.\n\n'
+                '4. Payment Terms\n'
+                'Payments are processed as per booking confirmations.\n\n'
+                '5. Cancellation and Refunds\n'
+                'Cancellation policies vary by test type and booking time.\n\n'
+                '6. Compliance\n'
+                'All labs must comply with applicable healthcare and data protection laws.\n\n'
+                '7. Support\n'
+                'For questions:\n'
+                'Email: seevakcare@gmail.com\n'
+                'Phone: +91 9771365160',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
           ),
         ],
       ),

@@ -695,7 +695,11 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
           leading: const Icon(Icons.help),
           title: const Text('Help & Support'),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: () {},
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Email: seevakcare@gmail.com | Phone: +91 9771365160')),
+            );
+          },
         ),
         const Divider(),
         ListTile(
