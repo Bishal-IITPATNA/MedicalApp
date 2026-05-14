@@ -714,15 +714,6 @@ def verify_otp():
                 city=additional_data.get('city', ''),
                 state=additional_data.get('state', '')
             )
-        elif otp_verification.role == 'medical_store':
-            profile = MedicalStore(
-                user_id=user.id,
-                name=otp_verification.name,
-                phone=otp_verification.phone or '',
-                license_number=additional_data.get('license_number', ''),
-                city=additional_data.get('city', ''),
-                state=additional_data.get('state', '')
-            )
         elif otp_verification.role == 'lab_store':
             profile = LabStore(
                 user_id=user.id,

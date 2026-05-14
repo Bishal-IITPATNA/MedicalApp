@@ -24,7 +24,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     {'value': 'patient', 'label': 'Patient'},
     {'value': 'doctor', 'label': 'Doctor'},
     {'value': 'nurse', 'label': 'Nurse'},
-    {'value': 'medical_store', 'label': 'Medical Store'},
     {'value': 'lab_store', 'label': 'Lab Store'},
   ];
 

@@ -677,7 +677,7 @@ def reject_order(order_id):
 @bp.route('/orders/<int:order_id>/verify-otp', methods=['POST'])
 @jwt_required()
 def verify_otp_and_dispatch(order_id):
-    """Verify OTP for pickup orders - complete order and deduct stock. For home delivery, just verify OTP."""
+    """Verify OTP for home delivery orders - verify OTP and generate bill."""
     current_user_id = get_jwt_identity()
     store = MedicalStore.query.filter_by(user_id=current_user_id).first()
     
@@ -702,23 +702,8 @@ def verify_otp_and_dispatch(order_id):
         # Mark OTP as verified
         order.otp_verified = True
         
-        # For pickup orders: complete the order and deduct stock
-        if order.delivery_type == 'pickup':
-            order.status = 'completed'
-            
-            # Deduct stock for each medicine
-            for order_item in order.items:
-                if order_item.medicine_id:
-                    medicine = Medicine.query.get(order_item.medicine_id)
-                    if medicine and medicine.store_id == store.id:
-                        if medicine.stock_quantity >= order_item.quantity:
-                            medicine.stock_quantity -= order_item.quantity
-                        else:
-                            raise Exception(f'Insufficient stock for {medicine.name}')
-        else:
-            # For home delivery: just verify OTP, don't deduct stock yet
-            # Stock will be deducted when order status is updated to 'delivered'
-            pass
+        # For home delivery: mark order as OTP verified, don't deduct stock yet
+        # Stock will be deducted when order status is updated to 'delivered'
         
         # Check if bill already exists
         existing_bill = MedicineBill.query.filter_by(order_id=order.id).first()
@@ -729,12 +714,16 @@ def verify_otp_and_dispatch(order_id):
             if not patient:
                 raise Exception('Patient not found')
             
-            # Calculate bill amounts
-            subtotal = order.total_amount
+            # Bill amounts should match the order calculations
+            # Subtotal: sum of medicine prices
+            subtotal = order.subtotal_amount
             tax_percentage = 5.0  # 5% GST
-            tax_amount = round(subtotal * tax_percentage / 100, 2)
+            tax_amount = order.gst_amount  # Use pre-calculated GST from order
             discount = 0.0
-            total_amount = round(subtotal + tax_amount - discount, 2)
+            # Total includes delivery charges
+            total_with_gst = subtotal + tax_amount
+            delivery_charges = order.delivery_charges
+            total_amount = round(total_with_gst + delivery_charges, 2)
             
             # Create bill
             bill = MedicineBill(
@@ -756,9 +745,9 @@ def verify_otp_and_dispatch(order_id):
                 total_amount=total_amount,
                 payment_method=order.payment_status,
                 payment_status='completed',
-                delivery_type=order.delivery_type,
+                delivery_type='home_delivery',
                 delivery_address=order.delivery_address,
-                notes=order.notes
+                notes=f'Delivery Charges: ₹{delivery_charges:.2f}\n{order.notes or ""}'
             )
             db.session.add(bill)
             db.session.flush()  # Get bill.id
@@ -782,15 +771,12 @@ def verify_otp_and_dispatch(order_id):
         # Notify patient
         patient = Patient.query.get(order.patient_id)
         if patient:
-            if order.delivery_type == 'home_delivery':
-                message = f'OTP verified for order #{order.id}. Your order is ready for dispatch. Bill #{bill.bill_number}.'
-            else:
-                message = f'Your order #{order.id} has been completed. Bill #{bill.bill_number} generated. Thank you for your purchase!'
+            message = f'OTP verified for order #{order.id}. Your order is ready for dispatch. Bill #{bill.bill_number}.'
                 
             notification = Notification(
                 user_id=patient.user_id,
                 patient_id=patient.id,
-                title=f'Order {"Completed" if order.delivery_type == "pickup" else "OTP Verified"} - Bill Generated',
+                title='Order OTP Verified - Bill Generated',
                 message=message,
                 notification_type='order_update',
                 related_id=order.id
@@ -799,10 +785,9 @@ def verify_otp_and_dispatch(order_id):
         
         db.session.commit()
         
-        status_message = 'completed' if order.delivery_type == 'pickup' else 'OTP verified'
         return jsonify({
             'success': True,
-            'message': f'Order {status_message} successfully. Bill generated.',
+            'message': 'OTP verified successfully. Bill generated.',
             'order': order.to_dict(),
             'bill': bill.to_dict()
         }), 200
@@ -850,63 +835,6 @@ def get_bill_detail(bill_id):
         return jsonify({'error': 'Bill not found'}), 404
     
     return jsonify(bill.to_dict()), 200
-
-@bp.route('/orders/<int:order_id>/complete-pickup', methods=['POST'])
-@jwt_required()
-def complete_pickup(order_id):
-    """Mark pickup order as completed and deduct stock"""
-    current_user_id = get_jwt_identity()
-    store = MedicalStore.query.filter_by(user_id=current_user_id).first()
-    
-    if not store:
-        return jsonify({'error': 'Medical store profile not found'}), 404
-    
-    order = MedicineOrder.query.filter_by(id=order_id, store_id=store.id).first()
-    
-    if not order:
-        return jsonify({'error': 'Order not found'}), 404
-    
-    if order.delivery_type != 'pickup':
-        return jsonify({'error': 'This endpoint is only for pickup orders'}), 400
-    
-    try:
-        # Mark as completed
-        order.status = 'completed'
-        
-        # Deduct stock for each medicine
-        for order_item in order.items:
-            if order_item.medicine_id:
-                medicine = Medicine.query.get(order_item.medicine_id)
-                if medicine and medicine.store_id == store.id:
-                    if medicine.stock_quantity >= order_item.quantity:
-                        medicine.stock_quantity -= order_item.quantity
-                    else:
-                        raise Exception(f'Insufficient stock for {medicine.name}')
-        
-        # Notify patient
-        patient = Patient.query.get(order.patient_id)
-        if patient:
-            notification = Notification(
-                user_id=patient.user_id,
-                patient_id=patient.id,
-                title='Order Completed',
-                message=f'Your order #{order.id} has been completed at {store.name}',
-                notification_type='order_update',
-                related_id=order.id
-            )
-            db.session.add(notification)
-        
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Order completed successfully',
-            'order': order.to_dict()
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
 
 @bp.route('/orders/<int:order_id>/update-delivery-status', methods=['POST'])
 @jwt_required()

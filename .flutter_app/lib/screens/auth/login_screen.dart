@@ -88,9 +88,6 @@ class _LoginScreenState extends State<LoginScreen> {
       case 'admin':
         route = '/admin-dashboard';
         break;
-      case 'medical_store':
-        route = '/medical-store-dashboard';
-        break;
       case 'lab_store':
         route = '/lab-store-dashboard';
         break;
@@ -137,8 +134,6 @@ class _LoginScreenState extends State<LoginScreen> {
         return Icons.person;
       case 'admin':
         return Icons.admin_panel_settings;
-      case 'medical_store':
-        return Icons.local_pharmacy;
       case 'lab_store':
         return Icons.science;
       default:
@@ -148,8 +143,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String _formatRoleName(String role) {
     switch (role) {
-      case 'medical_store':
-        return 'Medical Store';
       case 'lab_store':
         return 'Lab Store';
       default:

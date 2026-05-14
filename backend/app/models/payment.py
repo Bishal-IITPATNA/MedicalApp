@@ -7,9 +7,15 @@ class Payment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    payment_method = db.Column(db.String(50))  # gpay, phonepe, credit_card, debit_card
-    payment_status = db.Column(db.String(20), default='pending')  # pending, completed, failed
+    payment_method = db.Column(db.String(50))  # razorpay, gpay, phonepe, credit_card, debit_card
+    payment_status = db.Column(db.String(20), default='pending')  # pending, initiated, completed, failed
     transaction_id = db.Column(db.String(200), unique=True)
+    
+    # Razorpay specific fields
+    razorpay_order_id = db.Column(db.String(100), unique=True, nullable=True)
+    razorpay_payment_id = db.Column(db.String(100), nullable=True)
+    razorpay_signature = db.Column(db.String(200), nullable=True)
+    razorpay_receipt = db.Column(db.String(100), nullable=True)
     
     # Related entity
     related_id = db.Column(db.Integer)  # ID of related appointment, order, etc.
@@ -31,6 +37,8 @@ class Payment(db.Model):
             'payment_method': self.payment_method,
             'payment_status': self.payment_status,
             'transaction_id': self.transaction_id,
+            'razorpay_order_id': self.razorpay_order_id,
+            'razorpay_payment_id': self.razorpay_payment_id,
             'related_id': self.related_id,
             'related_type': self.related_type,
             'payment_date': self.payment_date.isoformat() if self.payment_date else None

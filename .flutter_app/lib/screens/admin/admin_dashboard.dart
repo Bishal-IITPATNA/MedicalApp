@@ -743,12 +743,6 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           'icon': Icons.local_hospital,
           'color': Colors.purple,
         };
-      case 'medical_store':
-        return {
-          'title': 'Medical Stores',
-          'icon': Icons.store,
-          'color': Colors.orange,
-        };
       case 'lab_store':
         return {
           'title': 'Lab Stores',

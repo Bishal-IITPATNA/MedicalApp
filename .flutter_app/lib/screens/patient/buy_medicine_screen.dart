@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
-import 'select_medical_store_screen.dart';
 
 class BuyMedicineScreen extends StatefulWidget {
   final List<String>? prescribedMedicines;
@@ -589,54 +588,8 @@ class _BuyMedicineScreenState extends State<BuyMedicineScreen> {
       };
     }).toList();
 
-    final total = _calculateTotal(_medicines.where((m) => _cart.containsKey(m['id'])).toList());
-
-    // Show delivery type selection dialog
-    final deliveryType = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Delivery Type'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.store, color: Colors.blue),
-              title: const Text('Store Pickup'),
-              subtitle: const Text('Pick up from selected store'),
-              onTap: () => Navigator.pop(context, 'pickup'),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.home, color: Colors.green),
-              title: const Text('Home Delivery'),
-              subtitle: const Text('Delivered to your address'),
-              onTap: () => Navigator.pop(context, 'home_delivery'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (deliveryType == null) return;
-
-    dynamic result;
-    
-    if (deliveryType == 'home_delivery') {
-      // For home delivery, place order directly without store selection
-      result = await _placeHomeDeliveryOrder(items);
-    } else {
-      // For pickup, navigate to store selection screen
-      result = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SelectMedicalStoreScreen(
-            cartItems: items,
-            totalAmount: total,
-            deliveryType: deliveryType,
-          ),
-        ),
-      );
-    }
+    // Place home delivery order
+    final result = await _placeHomeDeliveryOrder(items);
 
     // Clear cart if order was placed successfully
     if (result == true && mounted) {
@@ -657,7 +610,7 @@ class _BuyMedicineScreenState extends State<BuyMedicineScreen> {
       if (response['success'] && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Order placed! Medical stores will be notified.'),
+            content: Text('Order placed for home delivery! You will receive it soon.'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 3),
           ),

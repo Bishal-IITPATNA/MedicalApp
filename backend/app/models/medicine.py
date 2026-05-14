@@ -46,10 +46,13 @@ class MedicineOrder(db.Model):
     current_store_id = db.Column(db.Integer, db.ForeignKey('medical_stores.id'), nullable=True)
     order_date = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(30), default='pending')  # pending, confirmed, accepted, dispatched, out_for_delivery, delivered, completed, declined, cancelled
-    total_amount = db.Column(db.Float, default=0.0)
-    payment_status = db.Column(db.String(20), default='pending')  # pending, completed
+    subtotal_amount = db.Column(db.Float, default=0.0)  # Sum of medicine prices (before GST and delivery)
+    gst_amount = db.Column(db.Float, default=0.0)  # 5% GST on subtotal
+    delivery_charges = db.Column(db.Float, default=0.0)  # Delivery charges: Rs 50 if subtotal+gst < 500, else 10% of (subtotal+gst)
+    total_amount = db.Column(db.Float, default=0.0)  # subtotal + gst + delivery_charges
+    payment_status = db.Column(db.String(20), default='pending')  # pending, initiated, completed, failed
     delivery_address = db.Column(db.Text)
-    delivery_type = db.Column(db.String(20), default='pickup')  # pickup, home_delivery
+    delivery_type = db.Column(db.String(20), default='home_delivery')  # home_delivery only
     delivery_otp = db.Column(db.String(6))  # OTP for delivery verification
     otp_verified = db.Column(db.Boolean, default=False)
     notes = db.Column(db.Text)
@@ -76,6 +79,9 @@ class MedicineOrder(db.Model):
             'current_store_id': self.current_store_id,
             'order_date': self.order_date.isoformat() if self.order_date else None,
             'status': self.status,
+            'subtotal_amount': self.subtotal_amount,
+            'gst_amount': self.gst_amount,
+            'delivery_charges': self.delivery_charges,
             'total_amount': self.total_amount,
             'payment_status': self.payment_status,
             'delivery_address': self.delivery_address,
@@ -231,12 +237,13 @@ class MedicineBill(db.Model):
     tax_percentage = db.Column(db.Float, default=0.0)
     tax_amount = db.Column(db.Float, default=0.0)
     discount = db.Column(db.Float, default=0.0)
+    delivery_charges = db.Column(db.Float, default=0.0)
     total_amount = db.Column(db.Float, default=0.0)
     
     payment_method = db.Column(db.String(50))
     payment_status = db.Column(db.String(20), default='completed')
     
-    delivery_type = db.Column(db.String(20))  # pickup, home_delivery
+    delivery_type = db.Column(db.String(20))  # home_delivery only
     delivery_address = db.Column(db.Text)
     
     notes = db.Column(db.Text)
@@ -280,6 +287,7 @@ class MedicineBill(db.Model):
             'tax_percentage': self.tax_percentage,
             'tax_amount': self.tax_amount,
             'discount': self.discount,
+            'delivery_charges': self.delivery_charges,
             'total_amount': self.total_amount,
             'payment_method': self.payment_method,
             'payment_status': self.payment_status,

@@ -13,6 +13,18 @@ import random
 import string
 import random
 
+def calculate_delivery_charges(total_with_gst):
+    """
+    Calculate delivery charges based on total amount (inclusive of GST)
+    Rules:
+    - If total < Rs 500: flat Rs 50
+    - If total >= Rs 500: 10% of total
+    """
+    if total_with_gst < 500:
+        return 50.0
+    else:
+        return round(total_with_gst * 0.10, 2)
+
 bp = Blueprint('patient', __name__, url_prefix='/api/patient')
 
 def paginate_query(query, page=1, per_page=20):
@@ -322,7 +334,7 @@ def medicine_orders():
             'has_prev': result['has_prev']
         }), 200
     
-    # POST - Create new medicine order
+    # POST - Create new medicine order (home delivery only)
     data = request.get_json()
     
     # Validate required fields
@@ -330,207 +342,100 @@ def medicine_orders():
         return jsonify({'error': 'Order must contain at least one item'}), 400
     
     try:
-        # Calculate total amount
-        total_amount = sum(item.get('price', 0) * item.get('quantity', 0) for item in data['items'])
+        # Calculate subtotal (sum of medicine prices before GST)
+        subtotal_amount = sum(item.get('price', 0) * item.get('quantity', 0) for item in data['items'])
         
-        # Get selected store or use automatic routing
-        selected_store_id = data.get('store_id')
-        delivery_type = data.get('delivery_type', 'pickup')  # pickup or home_delivery
-        delivery_address = data.get('delivery_address')
+        # Calculate GST (5% on subtotal)
+        gst_percentage = 5.0
+        gst_amount = round(subtotal_amount * gst_percentage / 100, 2)
         
-        if selected_store_id:
-            # Patient selected a specific store
-            selected_store = MedicalStore.query.get(selected_store_id)
-            if not selected_store:
-                return jsonify({'error': 'Selected medical store not found'}), 404
-            
-            # Create the medicine order with selected store
-            # Generate OTP for all orders (both pickup and home delivery)
-            delivery_otp = ''.join(random.choices(string.digits, k=6))
-            
-            order = MedicineOrder(
-                patient_id=patient.id,
-                store_id=selected_store.id,
-                total_amount=total_amount,
-                status='confirmed',
-                delivery_type=delivery_type,
-                delivery_address=delivery_address,
-                delivery_otp=delivery_otp,
-                otp_verified=False
+        # Calculate total with GST
+        total_with_gst = subtotal_amount + gst_amount
+        
+        # Calculate delivery charges
+        delivery_charges = calculate_delivery_charges(total_with_gst)
+        
+        # Calculate final total amount
+        total_amount = round(total_with_gst + delivery_charges, 2)
+        
+        # All medicine orders are home delivery only
+        delivery_address = data.get('delivery_address') or patient.address
+        if not delivery_address:
+            return jsonify({'error': 'Delivery address is required'}), 400
+        
+        # Home delivery orders go to admin
+        from app.models.user import User
+        admin_user = User.query.filter_by(role='admin').first()
+        
+        if not admin_user:
+            return jsonify({'error': 'Admin not found'}), 400
+        
+        # Generate OTP for home delivery
+        delivery_otp = ''.join(random.choices(string.digits, k=6))
+        
+        # Create the medicine order for admin to handle
+        order = MedicineOrder(
+            patient_id=patient.id,
+            subtotal_amount=subtotal_amount,
+            gst_amount=gst_amount,
+            delivery_charges=delivery_charges,
+            total_amount=total_amount,
+            status='pending',
+            delivery_type='home_delivery',
+            delivery_address=delivery_address,
+            delivery_otp=delivery_otp,
+            otp_verified=False
+        )
+        db.session.add(order)
+        db.session.flush()
+        
+        # Create order items
+        for item_data in data['items']:
+            order_item = MedicineOrderItem(
+                order_id=order.id,
+                medicine_name=item_data.get('medicine_name', ''),
+                quantity=item_data.get('quantity', 0),
+                price=item_data.get('price', 0)
             )
-            
-            db.session.add(order)
-            db.session.flush()
-            
-            # Create order items and link to actual medicines
-            for item_data in data['items']:
-                medicine_name = item_data.get('medicine_name', '')
-                quantity = item_data.get('quantity', 0)
-                price = item_data.get('price', 0)
-                
-                # Find the medicine in the selected store
-                from sqlalchemy import func
-                medicine = Medicine.query.filter(
-                    Medicine.store_id == selected_store.id,
-                    func.lower(Medicine.name) == func.lower(medicine_name)
-                ).first()
-                
-                order_item = MedicineOrderItem(
-                    order_id=order.id,
-                    medicine_id=medicine.id if medicine else None,
-                    medicine_name=medicine_name,
-                    quantity=quantity,
-                    price=price
-                )
-                db.session.add(order_item)
-            
-            # Notify the selected store
-            notification = Notification(
-                user_id=selected_store.user_id,
-                patient_id=patient.id,
-                title='New Medicine Order',
-                message=f'New {delivery_type.replace("_", " ")} order #{order.id} from {patient.name}. Total: ₹{total_amount:.2f}. Verify OTP before {"dispatch" if delivery_type == "home_delivery" else "handing over"}.',
-                notification_type='medicine_order',
-                related_id=order.id
-            )
-            db.session.add(notification)
-            
-            # Notify patient with OTP
-            if delivery_type == 'home_delivery':
-                otp_message = f'Your order #{order.id} OTP: {delivery_otp}. Share this with the medical store for delivery verification.'
-            else:
-                otp_message = f'Your order #{order.id} OTP: {delivery_otp}. Show this when collecting your order from the store.'
-            
-            patient_notification = Notification(
-                user_id=patient.user_id,
-                patient_id=patient.id,
-                title='Order Confirmation',
-                message=otp_message,
-                notification_type='order_update',
-                related_id=order.id
-            )
-            db.session.add(patient_notification)
-            
-            db.session.commit()
-            
-            return jsonify({
-                'success': True,
-                'message': 'Order placed successfully',
-                'order': order.to_dict(),
-                'otp': delivery_otp
-            }), 201
-        else:
-            # Automatic routing
-            if delivery_type == 'home_delivery':
-                # Home delivery orders go to admin
-                from app.models.user import User
-                admin_user = User.query.filter_by(role='admin').first()
-                
-                if not admin_user:
-                    return jsonify({'error': 'Admin not found'}), 400
-                
-                # Generate OTP for home delivery
-                delivery_otp = ''.join(random.choices(string.digits, k=6))
-                # Create the medicine order for admin to handle
-                order = MedicineOrder(
-                    patient_id=patient.id,
-                    total_amount=total_amount,
-                    status='pending',
-                    delivery_type=delivery_type,
-                    delivery_address=delivery_address or patient.address,
-                    delivery_otp=delivery_otp,
-                    otp_verified=False
-                )
-                db.session.add(order)
-                db.session.flush()
-                # Create order items (without medicine_id or store_id)
-                for item_data in data['items']:
-                    order_item = MedicineOrderItem(
-                        order_id=order.id,
-                        medicine_name=item_data.get('medicine_name', ''),
-                        quantity=item_data.get('quantity', 0),
-                        price=item_data.get('price', 0)
-                    )
-                    db.session.add(order_item)
-                # Create notification for admin
-                notification = Notification(
-                    user_id=admin_user.id,
-                    patient_id=patient.id,
-                    title='New Home Delivery Order',
-                    message=f'New home delivery order #{order.id} from {patient.name}. Total: ₹{total_amount:.2f}. Please assign to a medical store.',
-                    notification_type='medicine_order',
-                    related_id=order.id
-                )
-                db.session.add(notification)
-                # Notify patient with OTP
-                otp_message = f'Your home delivery order #{order.id} OTP: {delivery_otp}. Share this with the medical store for delivery verification.'
-                patient_notification = Notification(
-                    user_id=patient.user_id,
-                    patient_id=patient.id,
-                    title='Order Confirmation',
-                    message=otp_message,
-                    notification_type='order_update',
-                    related_id=order.id
-                )
-                db.session.add(patient_notification)
-                db.session.commit()
-                return jsonify({
-                    'success': True,
-                    'message': 'Order placed successfully.',
-                    'order': order.to_dict(),
-                    'otp': delivery_otp
-                }), 201
-            else:
-                # Pickup orders - get first store alphabetically
-                first_store = MedicalStore.query.order_by(MedicalStore.name).first()
-                
-                if not first_store:
-                    return jsonify({'error': 'No medical stores available'}), 400
-                
-                # Create the medicine order with automatic routing
-                order = MedicineOrder(
-                    patient_id=patient.id,
-                    total_amount=total_amount,
-                    status='pending',
-                    current_store_id=first_store.id,
-                    offered_to_stores=json.dumps([first_store.id]),
-                    current_offer_time=datetime.utcnow(),
-                    timeout_minutes=5,
-                    delivery_type=delivery_type,
-                    delivery_address=delivery_address
-                )
-                
-                db.session.add(order)
-                db.session.flush()
-                
-                # Create order items (without medicine_id for automatic routing)
-                for item_data in data['items']:
-                    order_item = MedicineOrderItem(
-                        order_id=order.id,
-                        medicine_name=item_data.get('medicine_name', ''),
-                        quantity=item_data.get('quantity', 0),
-                        price=item_data.get('price', 0)
-                    )
-                    db.session.add(order_item)
-                
-                # Create notification for the first medical store
-                notification = Notification(
-                    user_id=first_store.user_id,
-                    patient_id=patient.id,
-                    title='New Medicine Order',
-                    message=f'New pickup order #{order.id} from {patient.name}. Total: ₹{total_amount:.2f}. Please respond within 5 minutes.',
-                    notification_type='medicine_order',
-                    related_id=order.id
-                )
-                db.session.add(notification)
-                
-                db.session.commit()
-                
-                return jsonify({
-                    'success': True,
-                    'message': 'Order placed successfully',
-                    'order': order.to_dict()
-                }), 201
+            db.session.add(order_item)
+        
+        # Create notification for admin
+        notification = Notification(
+            user_id=admin_user.id,
+            patient_id=patient.id,
+            title='New Home Delivery Medicine Order',
+            message=f'New home delivery order #{order.id} from {patient.name}. Subtotal: ₹{subtotal_amount:.2f}, GST: ₹{gst_amount:.2f}, Delivery: ₹{delivery_charges:.2f}, Total: ₹{total_amount:.2f}. Please assign to a medical store.',
+            notification_type='medicine_order',
+            related_id=order.id
+        )
+        db.session.add(notification)
+        
+        # Notify patient with OTP and charge breakdown
+        otp_message = f'Your medicine home delivery order #{order.id} OTP: {delivery_otp}. Subtotal: ₹{subtotal_amount:.2f}, GST: ₹{gst_amount:.2f}, Delivery: ₹{delivery_charges:.2f}, Total: ₹{total_amount:.2f}.'
+        patient_notification = Notification(
+            user_id=patient.user_id,
+            patient_id=patient.id,
+            title='Order Confirmation',
+            message=otp_message,
+            notification_type='order_update',
+            related_id=order.id
+        )
+        db.session.add(patient_notification)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Order placed successfully. We will deliver to your address.',
+            'order': order.to_dict(),
+            'otp': delivery_otp,
+            'breakdown': {
+                'subtotal': subtotal_amount,
+                'gst': gst_amount,
+                'delivery_charges': delivery_charges,
+                'total': total_amount
+            }
+        }), 201
         
     except Exception as e:
         db.session.rollback()
